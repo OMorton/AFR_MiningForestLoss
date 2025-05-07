@@ -28,6 +28,20 @@ did.prep <- function(x, lead.time = -10, post.time = 15,
   return(out)
 }
 
+## scale covars ----------------------------------------------------------------
+scale.tidy <- function(x) {
+  x %>% filter(!is.na(travel.time), !is.na(slope),
+               !is.na(pop.density), !is.na(elevation)) %>%
+    mutate(travel.time.z =  (travel.time  - mean(travel.time))/
+                 sd(travel.time),
+               pop.density.z =  (pop.density  - mean(pop.density))/
+                 sd(pop.density),
+               slope.z =  (slope  - mean(slope))/
+                 sd(slope),
+               elevation.z =  (elevation  - mean(elevation))/
+                 sd(elevation),
+               )
+}
 ## Estimate dynamic DiD --------------------------------------------------------
 fit.dynamic.DiD <- function(data = x, yname = "cumulative.forest.loss.perc",
                             xformula = NULL, method = c("csa", "gardner")){
@@ -42,7 +56,7 @@ fit.dynamic.DiD <- function(data = x, yname = "cumulative.forest.loss.perc",
       #gdata <- gdata %>% filter(rel.year.first >-11)
     } else {
       first_stage <- stats::as.formula(glue::glue("~ 0 + {xformula} | CLUSTER_ID + year")[[2]])
-      #gdata <- gdata %>% filter(rel.year.first >-11)
+      gdata <- gdata %>% filter(rel.year.first > -4)
     }
     
     gardner.did <- did2s(data = gdata, yname = yname, 
