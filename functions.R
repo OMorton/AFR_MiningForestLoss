@@ -1,4 +1,54 @@
 
+## Read in lists ---------------------------------------------------------------
+
+ read.bind.list <- function(x) {
+   combined.data <- data.frame()
+   
+   for (i in 1:29) {
+  file <- x$file[i]
+  # Read the text file as a data frame
+  load(paste0(dir.path,file))  # Change the arguments based on your file format
+  mine.buffer.forest.loss.df$country <- x$country[[i]]
+  # Bind the data to the combined data frame
+  combined.data <- rbind(combined.data, mine.buffer.forest.loss.df)
+   }
+   return(combined.data)
+ }
+
+## Add ISO codes ---------------------------------------------------------------
+ add.iso <- function(x) {
+   x %>% mutate(iso3 = case_when(country == "Angola" ~ "AGO",
+                                 country == "Burundi" ~ "BDI",
+                                 country == "Cameroon" ~ "CMR",
+                                 country == "Central African Republic" ~ "CAF",
+                                 country == "Comoros" ~ "COM",
+                                 country == "Côte d_Ivoire" ~ "CIV",
+                                 country == "Democratic Republic of the Congo" ~ "COD",
+                                 country == "Equatorial Guinea" ~ "GNQ",
+                                 country == "Ethiopia" ~ "ETH",
+                                 country == "Gabon" ~ "GAB",
+                                 country == "Ghana" ~ "GHA",
+                                 country == "Guinea" ~ "GIN",
+                                 country == "Guinea-Bissau" ~ "GNB",
+                                 country == "Kenya" ~ "KEN",
+                                 country == "Liberia" ~ "LBR",
+                                 country == "Madagascar" ~ "MDG",
+                                 country == "Malawi" ~ "MWI",
+                                 country == "Mozambique" ~ "MOZ",
+                                 country == "Nigeria" ~ "NGA",
+                                 country == "Republic of the Congo" ~ "COG",
+                                 country == "Rwanda" ~ "RWA",
+                                 country == "Sierra Leone" ~ "SLE",
+                                 country == "South Africa" ~ "ZAF",
+                                 country == "South Sudan" ~ "SSD",
+                                 country == "Swaziland" ~ "SWZ",
+                                 country == "Tanzania" ~ "TZA",
+                                 country == "Uganda" ~ "UGA",
+                                 country == "Zambia" ~ "ZMB",
+                                 country == "Zimbabwe" ~ "ZWE",
+                                 ))
+ }
+ 
 ## Tidy raw data and add covariate information----------------------------------
 did.prep <- function(x, lead.time = -10, post.time = 15, 
                      type = "loss", covariates = NULL){
