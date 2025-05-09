@@ -14,6 +14,21 @@
    }
    return(combined.data)
  }
+ 
+ ## Read covs lists ---------------------------------------------------------------
+ 
+ read.covs.list <- function(x) {
+   combined.data <- data.frame()
+   
+   for (i in 1:29) {
+     file <- x$file[i]
+     # Read the text file as a data frame
+     load(paste0(file))  # Change the arguments based on your file format
+     # Bind the data to the combined data frame
+     combined.data <- rbind(combined.data, mine.cluster.points.df)
+   }
+   return(combined.data)
+ }
 
 ## Add ISO codes ---------------------------------------------------------------
  add.iso <- function(x) {
