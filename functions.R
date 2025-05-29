@@ -15,7 +15,7 @@
    return(combined.data)
  }
  
- ## Read covs lists ---------------------------------------------------------------
+## Read covs lists ---------------------------------------------------------------
  
  read.covs.list <- function(x) {
    combined.data <- data.frame()
@@ -110,7 +110,8 @@ scale.tidy <- function(x) {
 ## Estimate dynamic DiD --------------------------------------------------------
 fit.dynamic.DiD <- function(data = x, yname = "cumulative.forest.loss.perc",
                             xformula = NULL, method = c("csa", "gardner")){
-  
+  all.coefs.vars <- NULL
+  for (y.var in yname) {
   buff <- unique(data$buffer.size)
   cdata <- data
   gdata <- data
@@ -124,29 +125,34 @@ fit.dynamic.DiD <- function(data = x, yname = "cumulative.forest.loss.perc",
       gdata <- gdata %>% filter(rel.year.first > -4)
     }
     
-    gardner.did <- did2s(data = gdata, yname = yname, 
+    gardner.did <- did2s(data = gdata, yname = y.var, 
                          treatment = "treatment",
                          first_stage = first_stage, 
                          second_stage = ~ i(rel.year.first, ref = c(-1)),
                          cluster_var = "CLUSTER_ID", verbose = TRUE)
     gardner.coefs <- did2s.tidy(gardner.did, buff = buff)
+    gardner.coefs$y.var <- y.var
   }
   
   if ("csa" %in% method) {
-    csa.did <- att_gt(data = cdata, yname = yname, tname="year",
+    csa.did <- att_gt(data = cdata, yname = y.var, tname="year",
                       idname="CLUSTER_ID", gname = "first.mine.year",
                       control_group = "notyettreated", base_period = "varying",
                       xformla = xformula, clustervars = "CLUSTER_ID", 
                       bstrap=T, cband=T)
     
     csa.coefs <- csa.tidy(csa.did, buff = buff)
+    csa.coefs$y.var <- y.var
+    
   }
   if (exists("csa.coefs") & exists("gardner.coefs")) {
     all.coefs <- rbind(csa.coefs, gardner.coefs)
   } else { if (exists("csa.coefs") & !exists("gardner.coefs")) {
-    all.coefs <- csa.coefs }else{all.coefs <- gardner.coefs}
-    return(all.coefs)
+    all.coefs <- csa.coefs }else{all.coefs <- gardner.coefs}}
+  all.coefs.vars <- rbind(all.coefs, all.coefs.vars)
   }
+  return(all.coefs.vars)
+  
 }
 
 ## extract DiD2s estimates from a DiD2S fixest object---------------------------
