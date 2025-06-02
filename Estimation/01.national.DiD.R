@@ -120,3 +120,70 @@ for (j in 1:length(country.ls)) {
          device = "png", width = 20, height = 35, units = "cm") 
 }
 
+
+## Temporal var ----------------------------------------------------------------
+j <- 1
+i <- "1km"
+
+did.grp.time.ls <- list()
+did.grp.ls <- list()
+
+for (j in 1:length(country.ls)) {
+  cat(j, "out of", length(country.ls), "\n")
+  for (i in c("1km", "2.5km", "5km", "10km", "20km", "5km.master")) {
+    
+    # get ixj combo
+    country.j <- country.ls[j]
+    nat.buff <- file.dir %>% filter(country == country.j, buffer == i)
+    # get files
+    load(paste0(dir.path, nat.buff$file))
+    load(paste0(cov.path, nat.buff$country, ".50p.forest.final.COVARIATES.RData"))
+    covs.i <- 
+      select(mine.cluster.points.df, -first.mine.year, -buffer.forest.prop)
+    
+    # check for any zero cover
+    zeroes <- "No"
+    if (any(mine.buffer.forest.loss.df$forest.cells.2000 ==0)) {
+      cat("Warning - 0 forest cover in 2000 detected for", nat.buff$country, "\n")
+      mine.buffer.forest.loss.df <- 
+        mine.buffer.forest.loss.df %>% filter(forest.cells.2000>0)
+      zeroes <- "Yes"
+    }
+    # prep for DiD
+    i.did.dat <- did.prep(mine.buffer.forest.loss.df,
+                          lead.time = -23, post.time = 23,
+                          type = "loss", covariates = covs.i)
+    
+    csa.did <- att_gt(data = i.did.dat, yname = "cumulative.forest.loss.perc", tname="year",
+                      idname="CLUSTER_ID", gname = "first.mine.year",
+                      control_group = "notyettreated", base_period = "varying",
+                      xformla = NULL, clustervars = "CLUSTER_ID", 
+                      bstrap=T, cband=T)
+    
+    grp.est <- aggte(csa.did, type = "group", na.rm = TRUE)
+    grp.out <- data.frame(year.since = grp.est$egt, 
+               estimate = grp.est$att.egt, 
+               lci = grp.est$att.egt - grp.est$crit.val.egt*grp.est$se.egt,
+               uci = grp.est$att.egt + grp.est$crit.val.egt*grp.est$se.egt,
+               p.value = NA, method = "Callaway & Sant'Anna 2021", buffer.size = i)
+
+    grp.time.out <- data.frame(grp = csa.did$group, t = csa.did$t, 
+                   estimate = csa.did$att, 
+                   lci = csa.did$att - csa.did$c*csa.did$se,
+                   uci = csa.did$att + csa.did$c*csa.did$se,
+                   p.value = NA, method = "Callaway & Sant'Anna 2021", buffer.size = i)
+    
+    grp.out$country <- country.j
+    grp.out$cluster.n <- length(mine.cluster.points.df$CLUSTER_ID)
+    grp.out$unique.trt.yrs <- length(unique(mine.cluster.points.df$first.mine.year))
+    grp.out$zeroes <- zeroes
+    
+    grp.time.out$country <- country.j
+    grp.time.out$cluster.n <- length(mine.cluster.points.df$CLUSTER_ID)
+    grp.time.out$unique.trt.yrs <- length(unique(mine.cluster.points.df$first.mine.year))
+    grp.time.out$zeroes <- zeroes
+
+    did.grp.ls[[paste0(country.j, ".", i)]] <- grp.out 
+    did.grp.time.ls[[paste0(country.j, ".", i)]] <- grp.time.out 
+  }
+}
