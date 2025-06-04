@@ -274,8 +274,8 @@ scale.did <- function(x) {
 
 spill.tidy <- function(x, buff) {
   x %>% 
-    rename("first.spillover.i" = paste0("first.spillover.", buff)) %>%
-    mutate(rel.spill.year = year - first.spillover,
+    rename("first.spillover.i" = paste0("spillover.", buff)) %>%
+    mutate(rel.spill.year = year - first.spillover.i,
                rel.spill.year = ifelse(is.na(rel.spill.year), -Inf, rel.spill.year),
                spill.treat = ifelse(rel.spill.year >= 0, 1, 0),
                spill.or.treat = ifelse(spill.treat + treatment.n > 0, 1, 0))
@@ -325,4 +325,31 @@ spillover.dynamic.DiD <- function(x, yname = "cumulative.forest.loss.perc"){
     mutate(method = "Gardner 2022", buffer.size = "master5000")
   
   rbind(spill.coefs, no.spill.coefs)
+}
+
+## Spillover plot summary ------------------------------------------------------
+
+spill.plot <- function(x, 
+                         mine.col = "red", spill.col = "blue",
+                         total.col = "black",
+                         pre.yrs = NULL, post.yrs = NULL, legend = "none",
+                         y.label = "Forest loss (% points)") {
+  
+    if (is.null(pre.yrs) & is.null(post.yrs)){
+      post.yrs <- max(x$year.since)
+      pre.yrs <- min(x$year.since)
+    } 
+  
+      x.i <- x %>% filter(year.since >= pre.yrs & year.since <= post.yrs)
+    
+    plt.i <- ggplot(x.i, 
+                    aes(year.since, estimate, colour = effect)) +
+      geom_point(size = 2) +
+      geom_errorbar(aes(ymin = lci, ymax = uci), width = 0, size = .8) +
+      scale_color_manual(values = c(mine.col, spill.col, total.col)) +
+      geom_vline(xintercept = -1) +
+      geom_hline(yintercept = 0, linetype = "dashed") +
+      xlab("Years since mining") + ylab(paste0(y.label)) +
+      theme_minimal(base_size = 8) +
+      theme(legend.position = legend, legend.key.width = unit(01, "cm"))
 }
