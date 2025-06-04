@@ -17,11 +17,12 @@ file.dir <- file.dir %>% mutate(country = sub(".forest.*", "", file),
                                 buffer = sub(".forest.mines.", "", buffer),
                                 buffer = str_remove(buffer, country))
 
-unique(file.dir$buffer)
 country.ls <- unique(file.dir$country)
 did.ls <- list()
 did.covar.ls <- list()
 
+j <- 1
+i <- "1km"
 ## Estimate DiD ----------------------------------------------------------------
 # omit 20km for now
 for (j in 1:length(country.ls)) {
@@ -161,7 +162,7 @@ for (j in 1:length(country.ls)) {
                       bstrap=T, cband=T)
     
     grp.est <- aggte(csa.did, type = "group", na.rm = TRUE)
-    grp.out <- data.frame(year.since = grp.est$egt, 
+    grp.out <- data.frame(t = grp.est$egt, 
                estimate = grp.est$att.egt, 
                lci = grp.est$att.egt - grp.est$crit.val.egt*grp.est$se.egt,
                uci = grp.est$att.egt + grp.est$crit.val.egt*grp.est$se.egt,
@@ -187,3 +188,6 @@ for (j in 1:length(country.ls)) {
     did.grp.time.ls[[paste0(country.j, ".", i)]] <- grp.time.out 
   }
 }
+
+save(did.grp.ls, file = "Outputs/DiD.tables/time.varying.DiD.RData")
+save(did.grp.time.ls, file = "Outputs/DiD.tables/group-time.varying.DiD.RData")
