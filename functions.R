@@ -272,8 +272,10 @@ scale.did <- function(x) {
 
 ## Spillover tidying -----------------------------------------------------------
 
-spill.tidy <- function(x) {
-  x %>% mutate(rel.spill.year = year - first.spillover,
+spill.tidy <- function(x, buff) {
+  x %>% 
+    rename("first.spillover.i" = paste0("first.spillover.", buff)) %>%
+    mutate(rel.spill.year = year - first.spillover,
                rel.spill.year = ifelse(is.na(rel.spill.year), -Inf, rel.spill.year),
                spill.treat = ifelse(rel.spill.year >= 0, 1, 0),
                spill.or.treat = ifelse(spill.treat + treatment.n > 0, 1, 0))
@@ -289,18 +291,18 @@ spillover.dynamic.DiD <- function(x, yname = "cumulative.forest.loss.perc"){
   spill.mod <- did2s::did2s(
     data = x,
     yname = yname,
-    first_stage = ~ 0 | CLUSTER + year,
+    first_stage = ~ 0 | CLUSTER_ID + year,
     second_stage = second_stage_spill,
     treatment = "spill.or.treat",
-    cluster_var = "CLUSTER")
+    cluster_var = "CLUSTER_ID")
   
   no.spill.mod <- did2s::did2s(
     data = x,
     yname = yname,
-    first_stage = ~ 0 | CLUSTER + year,
+    first_stage = ~ 0 | CLUSTER_ID + year,
     second_stage = second_stage_nospill,
     treatment = "treatment",
-    cluster_var = "CLUSTER")
+    cluster_var = "CLUSTER_ID")
   
   spill.coefs <- broom::tidy(spill.mod) %>%
     mutate(lci = estimate - std.error*1.96,
