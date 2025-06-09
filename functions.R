@@ -195,7 +195,7 @@ plot.DiD2S.f <- function(x,
       post.yrs <- max(x$year.since)
       pre.yrs <- min(x$year.since)
     } else {
-      x.method <- x %>% filter(year.since >= pre.yrs & year.since <= post.yrs,
+      x.method <- x[[1]] %>% filter(year.since >= pre.yrs & year.since <= post.yrs,
                                method == i)
     }
     
@@ -272,13 +272,22 @@ scale.did <- function(x) {
 
 ## Spillover tidying -----------------------------------------------------------
 
-spill.tidy <- function(x, buff) {
+spill.tidy <- function(x, buff, concentric.ring) {
+  if (concentric.ring == "fixed") {
+    x %>% 
+      rename("first.spillover.i" = "spillover.10km.master") %>%
+      mutate(rel.spill.year = year - first.spillover.i,
+             rel.spill.year = ifelse(is.na(rel.spill.year), -Inf, rel.spill.year),
+             spill.treat = ifelse(rel.spill.year >= 0, 1, 0),
+             spill.or.treat = ifelse(spill.treat + treatment.n > 0, 1, 0))
+  }else{
   x %>% 
     rename("first.spillover.i" = paste0("spillover.", buff)) %>%
     mutate(rel.spill.year = year - first.spillover.i,
                rel.spill.year = ifelse(is.na(rel.spill.year), -Inf, rel.spill.year),
                spill.treat = ifelse(rel.spill.year >= 0, 1, 0),
                spill.or.treat = ifelse(spill.treat + treatment.n > 0, 1, 0))
+  }
 }
 
 ## spillover dynamic DiD -------------------------------------------------------
@@ -352,4 +361,36 @@ spill.plot <- function(x,
       xlab("Years since mining") + ylab(paste0(y.label)) +
       theme_minimal(base_size = 8) +
       theme(legend.position = legend, legend.key.width = unit(01, "cm"))
+}
+
+## spillover basic plot --------------------------------------------------------
+plot.spill.DiD2S <- function(x, 
+                         pre.mine.col = c("#C6507EFF", "#0D0887FF"),
+                         post.mine.col = c("#EF7F4FFF", "#F0F921FF"),
+                         pre.yrs = NULL, post.yrs = NULL, legend = "none",
+                         y.label = "Forest loss (% points)"){
+  
+  precol_magma <- colorRampPalette(pre.mine.col)
+  postcol_magma <- colorRampPalette(post.mine.col)
+  
+    if (is.null(pre.yrs) & is.null(post.yrs)){
+      post.yrs <- max(x$year.since)
+      pre.yrs <- min(x$year.since)
+    } else {
+      x.method <- x %>% filter(year.since >= pre.yrs & year.since <= post.yrs)
+    }
+    
+    
+    ggplot(x.method, 
+                    aes(year.since, estimate, colour = year.since)) +
+      geom_point(size = 2) +
+      geom_errorbar(aes(ymin = lci, ymax = uci), width = 0, size = .8) +
+      scale_color_gradientn(colors=c(precol_magma(abs(pre.yrs)),postcol_magma(post.yrs + 1)),
+                            name="Years since mining",breaks = c(pre.yrs,0,post.yrs)) +
+      geom_vline(xintercept = -1) +
+      geom_hline(yintercept = 0, linetype = "dashed") +
+      xlab("Years since mining") + ylab(paste0(y.label)) +
+      theme_minimal(base_size = 8) +
+      theme(legend.position = legend, legend.key.width = unit(01, "cm"))
+    
 }
