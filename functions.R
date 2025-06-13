@@ -38,6 +38,7 @@
                                  country == "Central African Republic" ~ "CAF",
                                  country == "Comoros" ~ "COM",
                                  country == "Côte d_Ivoire" ~ "CIV",
+                                 country == "Côte d'Ivoire" ~ "CIV",
                                  country == "Democratic Republic of the Congo" ~ "COD",
                                  country == "Equatorial Guinea" ~ "GNQ",
                                  country == "Ethiopia" ~ "ETH",
