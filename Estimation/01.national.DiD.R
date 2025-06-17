@@ -15,7 +15,9 @@ file.dir <- data.frame(file = list.files(path = dir.path))
 file.dir <- file.dir %>% mutate(country = sub(".forest.*", "", file),
                                 buffer = sub(".buffer.forest.loss.df.RData", "", file),
                                 buffer = sub(".forest.mines.", "", buffer),
-                                buffer = str_remove(buffer, country))
+                                buffer = str_remove(buffer, country)) %>%
+  ## remove low n
+  filter(!country %in% c("South Sudan", "Comoros", "Burundi", "Malawi", "Rwanda"))
 
 country.ls <- unique(file.dir$country)
 did.ls <- list()
@@ -58,12 +60,12 @@ for (j in 1:length(country.ls)) {
     
     i.did.dat <- scale.tidy(i.did.dat)
     
-    i.did.covar.fit <- NULL
+    i.did.covar.fit <- data.frame(year.since = NA, estimate = NA, lci = NA, uci  = NA,
+                        p.value  = NA, method = NA, y.var = NA)
     try(i.did.covar.fit <- fit.dynamic.DiD(i.did.dat,
                     yname = "cumulative.forest.loss.perc",
-                    xformula = ~travel.time.z + pop.density.z + 
-                                elevation.z + slope.z, 
-                    method = c("csa")),
+                    xformula = ~ slope.z + elevation.z + pop.density.z + travel.time.z, 
+                    method = c("gardner")),
         silent = TRUE)
     
     i.did.fit$buffer.size <- i
