@@ -44,17 +44,19 @@ ssa.covs <- did.prep(ssa.5km.master,
          type = "loss", covariates = NULL) %>%
   left_join(covs.all) %>%
   group_by(country, CLUSTER_ID) %>%
-  mutate(cluster.country.id = cur_group_id()) %>%
-  filter(is.na(first.spillover))
+  mutate(cluster.country.id = cur_group_id())
 
 length(unique(ssa.covs$cluster.country.id))
 length(unique(ssa.covs$CLUSTER_ID))
 
+ssa.covs %>% filter(treatment == 1)
+
 gardner.did <- did2s(data = ssa.covs, yname = "cumulative.forest.loss.perc", 
                      treatment = "treatment",
-                     first_stage =  ~ 0 + country | cluster.country.id + year, 
+                     first_stage =  ~ 0 + i(country, year) | cluster.country.id + year, 
                      second_stage = ~ i(rel.year.first, ref = c(-1)),
                      cluster_var = "cluster.country.id", verbose = TRUE)
+
 
 gardner.tidy.1km <- did2s.tidy(gardner.did, buff = name.i) %>%
   mutate(cluster.n = length(unique(buff.i$cluster.country.id)))
@@ -77,10 +79,10 @@ i <- 5
 for (i in 1:5) {
   buff.i <- ssa.ls[[i]]
   name.i <- ssa.names[[i]]
-  
+ # main
   gardner.did <- did2s(data = buff.i, yname = "cumulative.forest.loss.perc", 
                    treatment = "treatment",
-                   first_stage =  ~ 0 + country | cluster.country.id + year, 
+                   first_stage =  ~ 0 + i(country, year) | cluster.country.id + year, 
                    second_stage = ~ i(rel.year.first, ref = c(-1)),
                    cluster_var = "cluster.country.id", verbose = TRUE)
   
@@ -97,27 +99,19 @@ for (i in 1:5) {
   csa.tidy.1km <- csa.tidy(csa.did, buff = name.i) %>%
     mutate(cluster.n = length(unique(buff.i$cluster.country.id)))
   
+  # main + covariates
+  gardner.did <- did2s(data = buff.i, yname = "cumulative.forest.loss.perc", 
+                       treatment = "treatment",
+                       first_stage =  ~ 0 + slope.z + elevation.z + pop.density.z + travel.time.z +
+                         i(country, year) | cluster.country.id + year, 
+                       second_stage = ~ i(rel.year.first, ref = c(-1)),
+                       cluster_var = "cluster.country.id", verbose = TRUE)
+  
+  gardner.tidy.1km <- did2s.tidy(gardner.did, buff = name.i) %>%
+    mutate(cluster.n = length(unique(buff.i$cluster.country.id)))
+  
   did.i <- rbind(gardner.tidy.1km, csa.tidy.1km)
   ssa.did <- rbind(ssa.did, did.i)
-  
-  ## temporal
-  grp.est <- aggte(csa.did, type = "group", na.rm = TRUE)
-  grp.out <- data.frame(t = grp.est$egt, 
-                        estimate = grp.est$att.egt, 
-                        lci = grp.est$att.egt - grp.est$crit.val.egt*grp.est$se.egt,
-                        uci = grp.est$att.egt + grp.est$crit.val.egt*grp.est$se.egt,
-                        p.value = NA, method = "Callaway & Sant'Anna 2021", buffer.size = i) %>%
-    mutate(cluster.n = length(unique(buff.i$cluster.country.id)))
-  
-  grp.time.out <- data.frame(grp = csa.did$group, t = csa.did$t, 
-                             estimate = csa.did$att, 
-                             lci = csa.did$att - csa.did$c*csa.did$se,
-                             uci = csa.did$att + csa.did$c*csa.did$se,
-                             p.value = NA, method = "Callaway & Sant'Anna 2021", buffer.size = i) %>%
-    mutate(cluster.n = length(unique(buff.i$cluster.country.id)))
-  
-  ssa.grp.did <- rbind(ssa.grp.did, grp.out)
-  ssa.grp.time.did <- rbind(ssa.grp.time.did, grp.time.out)
   
   
 }
