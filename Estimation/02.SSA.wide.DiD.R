@@ -91,7 +91,7 @@ for (i in 1:5) {
                     clustervars = "cluster.country.id", 
                     bstrap=T, cband=T)
   
-  csa.tidy <- csa.tidy(csa.did, buff = name.i) %>%
+  csa.tidy.df <- csa.tidy(csa.did, buff = name.i) %>%
     mutate(cluster.n = length(unique(buff.i$cluster.country.id)),
            pre.period = NA)
   
@@ -128,7 +128,7 @@ for (i in 1:5) {
            pre.period = -10)
   
   
-  did.i <- rbind(gardner.tidy, gardner.tidy.10, csa.tidy)
+  did.i <- rbind(gardner.tidy, gardner.tidy.10, csa.tidy.df)
   ssa.did <- rbind(ssa.did, did.i)
   ssa.did.covar <- rbind(ssa.did.covar, gardner.tidy.covar, gardner.tidy.covar10)
   
