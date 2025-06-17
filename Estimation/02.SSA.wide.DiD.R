@@ -64,7 +64,7 @@ gardner.tidy.1km <- did2s.tidy(gardner.did, buff = name.i) %>%
 ## SSA wide --------------------------------------------------------------------
 
 ssa.ls <- lapply(ssa.ls, function(x) {did.prep(x,
-                                     lead.time = -23, post.time = 23,
+                                     lead.time = -5, post.time = 23,
                                      type = "loss", covariates = NULL) %>%
                           group_by(country, CLUSTER_ID) %>%
                           mutate(cluster.country.id = cur_group_id())})
@@ -73,9 +73,9 @@ ssa.ls <- lapply(ssa.ls, function(x) {did.prep(x,
 
 ssa.names <- names(ssa.ls)
 ssa.did <- data.frame()
-ssa.grp.did <- data.frame()
-ssa.grp.time.did <- data.frame()
-i <- 5
+ssa.did.covar <- data.frame()
+
+i <- 1
 for (i in 1:5) {
   buff.i <- ssa.ls[[i]]
   name.i <- ssa.names[[i]]
@@ -100,25 +100,28 @@ for (i in 1:5) {
     mutate(cluster.n = length(unique(buff.i$cluster.country.id)))
   
   # main + covariates
-  gardner.did <- did2s(data = buff.i, yname = "cumulative.forest.loss.perc", 
+  covs.buff.i <- buff.i %>%
+    left_join(covs.all) %>%
+    group_by(country, CLUSTER_ID) %>%
+    mutate(cluster.country.id = cur_group_id()) %>% ungroup()
+  covs.buff.i <- scale.tidy(covs.buff.i)
+  
+  gardner.did.covar <- did2s(data = covs.buff.i, yname = "cumulative.forest.loss.perc", 
                        treatment = "treatment",
                        first_stage =  ~ 0 + slope.z + elevation.z + pop.density.z + travel.time.z +
                          i(country, year) | cluster.country.id + year, 
                        second_stage = ~ i(rel.year.first, ref = c(-1)),
                        cluster_var = "cluster.country.id", verbose = TRUE)
   
-  gardner.tidy.1km <- did2s.tidy(gardner.did, buff = name.i) %>%
-    mutate(cluster.n = length(unique(buff.i$cluster.country.id)))
+  gardner.tidy.1km.covar <- did2s.tidy(gardner.did.covar, buff = name.i) %>%
+    mutate(cluster.n = length(unique(covs.buff.i$cluster.country.id)))
   
   did.i <- rbind(gardner.tidy.1km, csa.tidy.1km)
   ssa.did <- rbind(ssa.did, did.i)
+  ssa.did.covar <- rbind(ssa.did.covar, gardner.tidy.1km.covar)
   
   
 }
 
 save(ssa.did, file = "Outputs/DiD.tables/SSA.tidy.1km.RData")
-save(ssa.grp.did, file = "Outputs/DiD.tables/SSA.tidy.grp.RData")
-save(ssa.grp.time.did, file = "Outputs/DiD.tables/SSA.tidy.grp.time.RData")
-
-
-
+save(ssa.did.covar, file = "Outputs/DiD.tables/SSA.tidy.1km.covar.RData")
