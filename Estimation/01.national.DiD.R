@@ -23,7 +23,7 @@ country.ls <- unique(file.dir$country)
 did.ls <- list()
 did.covar.ls <- list()
 
-j <- 1
+j <- 12
 i <- "1km"
 ## Estimate DiD ----------------------------------------------------------------
 # omit 20km for now
@@ -56,7 +56,7 @@ for (j in 1:length(country.ls)) {
     i.did.fit <- fit.dynamic.DiD(i.did.dat,
                                  yname = "cumulative.forest.loss.perc",
                                  xformula = NULL, 
-                                 method = c("csa", "gardner"))
+                                 method = c("csa", "gardner"), GAR.pre.period = -5)
     
     i.did.dat <- scale.tidy(i.did.dat)
     
@@ -65,7 +65,7 @@ for (j in 1:length(country.ls)) {
     try(i.did.covar.fit <- fit.dynamic.DiD(i.did.dat,
                     yname = "cumulative.forest.loss.perc",
                     xformula = ~ slope.z + elevation.z + pop.density.z + travel.time.z, 
-                    method = c("gardner")),
+                    method = c("gardner"), GAR.pre.period = -5),
         silent = TRUE)
     
     i.did.fit$buffer.size <- i
