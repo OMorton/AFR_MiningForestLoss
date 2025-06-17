@@ -110,7 +110,8 @@ scale.tidy <- function(x) {
 }
 ## Estimate dynamic DiD --------------------------------------------------------
 fit.dynamic.DiD <- function(data = x, yname = "cumulative.forest.loss.perc",
-                            xformula = NULL, method = c("csa", "gardner")){
+                            xformula = NULL, method = c("csa", "gardner"),
+                            GAR.pre.period = -5){
   all.coefs.vars <- NULL
   for (y.var in yname) {
   buff <- unique(data$buffer.size)
@@ -120,10 +121,10 @@ fit.dynamic.DiD <- function(data = x, yname = "cumulative.forest.loss.perc",
   if ("gardner" %in% method) {
     if (is.null(xformula)) {
       first_stage = ~ 0 | CLUSTER_ID + year 
-      #gdata <- gdata %>% filter(rel.year.first >-11)
+      gdata <- gdata %>% filter(rel.year.first >= GAR.pre.period)
     } else {
       first_stage <- stats::as.formula(glue::glue("~ 0 + {xformula} | CLUSTER_ID + year")[[2]])
-      gdata <- gdata %>% filter(rel.year.first >-11)
+      gdata <- gdata %>% filter(rel.year.first >= GAR.pre.period)
       }
     
     gardner.did <- did2s(data = gdata, yname = y.var, 
