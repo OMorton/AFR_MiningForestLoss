@@ -123,8 +123,8 @@ fit.dynamic.DiD <- function(data = x, yname = "cumulative.forest.loss.perc",
       #gdata <- gdata %>% filter(rel.year.first >-11)
     } else {
       first_stage <- stats::as.formula(glue::glue("~ 0 + {xformula} | CLUSTER_ID + year")[[2]])
-      gdata <- gdata %>% filter(rel.year.first > -4)
-    }
+      gdata <- gdata %>% filter(rel.year.first >-11)
+      }
     
     gardner.did <- did2s(data = gdata, yname = y.var, 
                          treatment = "treatment",
