@@ -37,34 +37,15 @@ ssa.ls <- list("1km" = ssa.1km,
                "5km.master" = ssa.5km.master)
 
 ## 5km specific
-covs.all <- read.covs.list(cov.dir)
-
-ssa.covs <- did.prep(ssa.5km.master,
-         lead.time = -23, post.time = 23,
-         type = "loss", covariates = NULL) %>%
-  left_join(covs.all) %>%
-  group_by(country, CLUSTER_ID) %>%
-  mutate(cluster.country.id = cur_group_id())
-
-length(unique(ssa.covs$cluster.country.id))
-length(unique(ssa.covs$CLUSTER_ID))
-
-ssa.covs %>% filter(treatment == 1)
-
-gardner.did <- did2s(data = ssa.covs, yname = "cumulative.forest.loss.perc", 
-                     treatment = "treatment",
-                     first_stage =  ~ 0 + i(country, year) | cluster.country.id + year, 
-                     second_stage = ~ i(rel.year.first, ref = c(-1)),
-                     cluster_var = "cluster.country.id", verbose = TRUE)
+covs.all <- read.covs.list(cov.dir) %>%
+  mutate(country = ifelse(country =="Côte d'Ivoire", "Côte d_Ivoire", country))
 
 
-gardner.tidy.1km <- did2s.tidy(gardner.did, buff = name.i) %>%
-  mutate(cluster.n = length(unique(buff.i$cluster.country.id)))
 
 ## SSA wide --------------------------------------------------------------------
 
 ssa.ls <- lapply(ssa.ls, function(x) {did.prep(x,
-                                     lead.time = -5, post.time = 23,
+                                     lead.time = -23, post.time = 23,
                                      type = "loss", covariates = NULL) %>%
                           group_by(country, CLUSTER_ID) %>%
                           mutate(cluster.country.id = cur_group_id())})
@@ -79,15 +60,29 @@ i <- 1
 for (i in 1:5) {
   buff.i <- ssa.ls[[i]]
   name.i <- ssa.names[[i]]
- # main
-  gardner.did <- did2s(data = buff.i, yname = "cumulative.forest.loss.perc", 
+ # main 5
+  gardner.did <- did2s(data = filter(buff.i, rel.year.first >= -5),
+                       yname = "cumulative.forest.loss.perc", 
                    treatment = "treatment",
                    first_stage =  ~ 0 + i(country, year) | cluster.country.id + year, 
                    second_stage = ~ i(rel.year.first, ref = c(-1)),
                    cluster_var = "cluster.country.id", verbose = TRUE)
   
-  gardner.tidy.1km <- did2s.tidy(gardner.did, buff = name.i) %>%
-    mutate(cluster.n = length(unique(buff.i$cluster.country.id)))
+  gardner.tidy <- did2s.tidy(gardner.did, buff = name.i) %>%
+    mutate(cluster.n = length(unique(buff.i$cluster.country.id)),
+           pre.period = -5)
+  
+  # main 10
+  gardner.did.10 <- did2s(data = filter(buff.i, rel.year.first >= -10),
+                       yname = "cumulative.forest.loss.perc", 
+                       treatment = "treatment",
+                       first_stage =  ~ 0 + i(country, year) | cluster.country.id + year, 
+                       second_stage = ~ i(rel.year.first, ref = c(-1)),
+                       cluster_var = "cluster.country.id", verbose = TRUE)
+  
+  gardner.tidy.10 <- did2s.tidy(gardner.did.10, buff = name.i) %>%
+    mutate(cluster.n = length(unique(buff.i$cluster.country.id)),
+           pre.period = -10)
   
   csa.did <- att_gt(data = buff.i, yname = "cumulative.forest.loss.perc", tname="year",
                     idname= "cluster.country.id", gname = "first.mine.year",
@@ -96,8 +91,9 @@ for (i in 1:5) {
                     clustervars = "cluster.country.id", 
                     bstrap=T, cband=T)
   
-  csa.tidy.1km <- csa.tidy(csa.did, buff = name.i) %>%
-    mutate(cluster.n = length(unique(buff.i$cluster.country.id)))
+  csa.tidy <- csa.tidy(csa.did, buff = name.i) %>%
+    mutate(cluster.n = length(unique(buff.i$cluster.country.id)),
+           pre.period = NA)
   
   # main + covariates
   covs.buff.i <- buff.i %>%
@@ -106,19 +102,35 @@ for (i in 1:5) {
     mutate(cluster.country.id = cur_group_id()) %>% ungroup()
   covs.buff.i <- scale.tidy(covs.buff.i)
   
-  gardner.did.covar <- did2s(data = covs.buff.i, yname = "cumulative.forest.loss.perc", 
+  gardner.did.covar <- did2s(data = filter(covs.buff.i, rel.year.first >= -5), 
+                             yname = "cumulative.forest.loss.perc", 
                        treatment = "treatment",
                        first_stage =  ~ 0 + slope.z + elevation.z + pop.density.z + travel.time.z +
                          i(country, year) | cluster.country.id + year, 
                        second_stage = ~ i(rel.year.first, ref = c(-1)),
                        cluster_var = "cluster.country.id", verbose = TRUE)
   
-  gardner.tidy.1km.covar <- did2s.tidy(gardner.did.covar, buff = name.i) %>%
-    mutate(cluster.n = length(unique(covs.buff.i$cluster.country.id)))
+  gardner.tidy.covar <- did2s.tidy(gardner.did.covar, buff = name.i) %>%
+    mutate(cluster.n = length(unique(covs.buff.i$cluster.country.id)),
+           pre.period = -5)
   
-  did.i <- rbind(gardner.tidy.1km, csa.tidy.1km)
+  ## 10 
+  gardner.did.covar.10 <- did2s(data = filter(covs.buff.i, rel.year.first >= -10), 
+                             yname = "cumulative.forest.loss.perc", 
+                             treatment = "treatment",
+                             first_stage =  ~ 0 + slope.z + elevation.z + pop.density.z + travel.time.z +
+                               i(country, year) | cluster.country.id + year, 
+                             second_stage = ~ i(rel.year.first, ref = c(-1)),
+                             cluster_var = "cluster.country.id", verbose = TRUE)
+  
+  gardner.tidy.covar.10 <- did2s.tidy(gardner.did.covar.10, buff = name.i) %>%
+    mutate(cluster.n = length(unique(covs.buff.i$cluster.country.id)),
+           pre.period = -10)
+  
+  
+  did.i <- rbind(gardner.tidy, gardner.tidy.10, csa.tidy)
   ssa.did <- rbind(ssa.did, did.i)
-  ssa.did.covar <- rbind(ssa.did.covar, gardner.tidy.1km.covar)
+  ssa.did.covar <- rbind(ssa.did.covar, gardner.tidy.covar, gardner.tidy.covar10)
   
   
 }
