@@ -87,15 +87,15 @@ for (t in c(-5, -10)) {
       
       }
       
-      did.ls[[paste0(country.j, ".", i)]] <- i.did.fit 
-      did.covar.ls[[paste0(country.j, ".", i)]] <- i.did.covar.fit 
+      did.ls[[paste0(country.j, ".", i, ".pre", t)]] <- i.did.fit 
+      did.covar.ls[[paste0(country.j, ".", i, ".pre", t)]] <- i.did.covar.fit 
     }
   }
 }
-save(did.ls, file = "Outputs/DiD.tables/all.not20km.DiD.RData")
-save(did.covar.ls, file = "Outputs/DiD.tables/all.covars.not20km.DiD.RData")
+save(did.ls, file = "Outputs/DiD.tables/all.DiD.all.t.RData")
+save(did.covar.ls, file = "Outputs/DiD.tables/all.covars.DiD.all.t.RData")
 
-## Plot checking ---------------------------------------------------------------
+## Per country plot checking ---------------------------------------------------------------
 load("Outputs/DiD.tables/all.not20km.DiD.RData")
 
 plot.ls <- lapply(did.ls, plot.DiD2S.f, pre.yrs = -5, post.yrs = 10, legend = "none",
