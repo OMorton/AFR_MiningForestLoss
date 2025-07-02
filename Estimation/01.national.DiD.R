@@ -23,10 +23,12 @@ country.ls <- unique(file.dir$country)
 did.ls <- list()
 did.covar.ls <- list()
 
-j <- 18
+j <- 6
 i <- "1km"
+t <--10
+
 ## Estimate DiD ----------------------------------------------------------------
-# omit 20km for now
+
 for (t in c(-5, -10)) {
   for (j in 1:length(country.ls)) {
     cat(j, "out of", length(country.ls), "\n")
@@ -66,7 +68,7 @@ for (t in c(-5, -10)) {
       try(i.did.covar.fit <- fit.dynamic.DiD(i.did.dat,
                       yname = "cumulative.forest.loss.perc",
                       xformula = ~ slope.z + elevation.z + pop.density.z + travel.time.z, 
-                      method = c("gardner"), GAR.pre.period = t),
+                      method = c("gardner", "csa"), GAR.pre.period = t),
           silent = TRUE)
       
       i.did.fit$buffer.size <- i
@@ -92,8 +94,9 @@ for (t in c(-5, -10)) {
     }
   }
 }
-save(did.ls, file = "Outputs/DiD.tables/all.DiD.all.t.RData")
-save(did.covar.ls, file = "Outputs/DiD.tables/all.covars.DiD.all.t.RData")
+
+save(did.ls, file = "Outputs/DiD.tables/all.DiD.all.t.Jul25.RData")
+save(did.covar.ls, file = "Outputs/DiD.tables/all.covars.DiD.all.t.Jul25.RData")
 
 ## Per country plot checking ---------------------------------------------------------------
 load("Outputs/DiD.tables/all.not20km.DiD.RData")
