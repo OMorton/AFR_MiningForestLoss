@@ -48,10 +48,6 @@ buffer.ls <- c("1km", "5km", "10km", "20km")
 did.plt.ls <- list()
 yr.since <- 10
 
-t <- -5
-i <- 1
-j <- 1
-
 GAR.grid <- expand.grid(method.i = "Gardner 2022", 
                         buffer.i = buffer.ls, pre.period = c(-5, -10))
 CSA.grid <- expand.grid(method.i = "Callaway & Sant'Anna 2021", 
@@ -203,26 +199,54 @@ ggsave(path = "Outputs/Figures/SM", filename = "CSA.DiD.Fig2.10yr.png",
 
 
 ## Figure 3 direct and indirect effects ----------------------------------------
-load("Outputs/DiD.tables/all.GAR.direct.indirect.DiD.RData")
 
+# orginal file - equivalent to the 0-10km snapshot after 10 years, with 10 years 
+# of pre data.
+#load("Outputs/DiD.tables/all.GAR.direct.indirect.DiD.RData")
 
-# note the clsuter size of some points
-gardner.ratio.sum <- did.all %>% 
-  filter(y.var %in% c("direct.forest.loss","indirect.forest.loss"),
-         year.since == 5, pre.length == -10, method == "Gardner 2022") %>%
-  mutate(ci95.cert.dir = ifelse(uci > 0 & lci > 0, "yes", "no"),
-         estimate = ifelse(estimate > 0, estimate, NA)) %>%
-  group_by(country) %>%
-  mutate(ci95.cert.dir = ifelse(any(ci95.cert.dir == "no"), "no", "yes")) %>%
-  pivot_wider(id_cols = c("country", "buffer.size", "cluster.n", 
-                          "pre.length" , "ci95.cert.dir"), 
-              values_from = "estimate", names_from = "y.var") %>%
-  mutate(ratio = indirect.forest.loss/direct.forest.loss,
-         small.cluster = ifelse(cluster.n < 30, "yes", "no"),
-         ratio = ifelse(ci95.cert.dir == "no", NA, ratio)) %>% 
-  add.iso() %>%
-  filter(small.cluster == "no")
-write.csv(gardner.ratio.sum, "Outputs/DiD.tables/national.ratios.all.csv")
+## get all data in
+load("Outputs/DiD.tables/all.direct.indirect.DiD.10km.Jul25.RData")
+dir.indir.10km <- did.all %>% mutate(pre.length = ifelse(is.na(pre.length), "csa", pre.length))
+load("Outputs/DiD.tables/all.direct.indirect.DiD.5km.Jul25.RData")
+dir.indir.5km <- did.all %>% mutate(pre.length = ifelse(is.na(pre.length), "csa", pre.length))
+
+dir.indir.all <- rbind(dir.indir.10km, dir.indir.5km) %>% 
+                  filter(cluster.n > 29)
+
+# set up plotting grid
+GAR.grid <- expand.grid(method.i = "Gardner 2022", year.since = c(5, 10),
+                        buffer.i = c("5km.master", "10km.master"), pre.length = c(-5, -10))
+CSA.grid <- expand.grid(method.i = "Callaway & Sant'Anna 2021", year.since = c(5, 10),
+                        buffer.i = c("5km.master", "10km.master"), pre.length = "csa")
+plt.grid <- rbind(GAR.grid, CSA.grid)
+
+i <- 1
+ratio.store <- data.frame()
+for (i in 1:nrow(plt.grid)) {
+  method.i <- plt.grid[i,]$method.i
+  year.since.i <- plt.grid[i,]$year.since
+  pre.length.i <- plt.grid[i,]$pre.length
+  buffer.i <- plt.grid[i,]$buffer.i
+  
+  ratio.i <- dir.indir.all %>% 
+    filter(y.var %in% c("direct.forest.loss","indirect.forest.loss"),
+           year.since == year.since.i, pre.length == pre.length.i, 
+           method == method.i, buffer.size == buffer.i) %>%
+    mutate(ci95.cert.dir = ifelse(uci > 0 & lci > 0, "yes", "no"),
+           estimate = ifelse(estimate > 0, estimate, NA)) %>%
+    group_by(country) %>%
+    mutate(ci95.cert.dir = ifelse(any(ci95.cert.dir == "no"), "no", "yes")) %>%
+    pivot_wider(id_cols = c("country", "buffer.size", "pre.length", "method",
+                            "year.since", "cluster.n", "ci95.cert.dir"), 
+                values_from = "estimate", names_from = "y.var") %>%
+    mutate(ratio.mean = indirect.forest.loss/direct.forest.loss,
+           ratio.ci = ifelse(ci95.cert.dir == "yes", ratio.mean, NA)) %>% 
+    add.iso()
+  
+  ratio.store <- rbind(ratio.store, ratio.i)
+}
+
+write.csv(ratio.store, "Outputs/DiD.tables/national.ratios.all.csv")
 
 ## maps
 library(rnaturalearth)
