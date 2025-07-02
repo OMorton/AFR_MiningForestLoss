@@ -7,6 +7,7 @@ library(ggpubr)
 # the repetitive nature of certain tasks e.g. processing, modelling and plotting buffer rings
 source("functions.R")
 
+## Direct and indirect 0-10 km buffer -------------------------------------------
 # extract all the data from the file naming
 # data stored on the X: drive
 all.path <- "X:/morton_research/User/bi1om/Research/Mining/AfricaWideMining_ForestLoss/Analysis/Data/NationalMining/forest.loss.in.buffers/"
@@ -21,7 +22,8 @@ country.ls <- unique(file.dir$country)
 did.all <- list()
 j <- 6
 t <- NA
-## Estimate DiD ----------------------------------------------------------------
+
+## Estimate DiD 
 
 for (t in c(-5, -10)) {
   for (j in 1:length(country.ls)) {
@@ -79,6 +81,43 @@ for (t in c(-5, -10)) {
                                  xformula = NULL, 
                                  method = c("gardner"), GAR.pre.period = t), silent = TRUE)
     
+    ## CSA runs optimally when provided with the whole panel.
+    ## Thus we dont run at -5 and -10 periods.
+    if (t == -10) {
+    i.did.csa <- data.frame(year.since = NA, estimate = NA, lci = NA, uci  = NA,
+                        p.value  = NA, method = NA, y.var = NA)
+    try(i.did.csa <- fit.dynamic.DiD(i.did.dat,
+                                 yname = c("direct.forest.loss","indirect.forest.loss",
+                                           "direct.perc", "indirect.perc"),
+                                 xformula = NULL, 
+                                 method = c("csa"), GAR.pre.period = NA), silent = TRUE)
+    }
+    
+    ## dont write out the CSA results twice for each of the Gardner t periods
+    if(t == -5) {
+      i.did$buffer.size <- "10km.master"
+      i.did$country <- country.j
+      i.did$cluster.n <- length(unique(i.did.dat$CLUSTER_ID))
+      i.did$unique.trt.yrs <- length(unique(i.did.dat$first.mine.year))
+      i.did$zeroes <- zeroes
+      i.did$pre.length <- t
+      did.all <- rbind(did.all, i.did)
+    } else {
+      i.did.csa$buffer.size <- "10km.master"
+      i.did.csa$country <- country.j
+      i.did.csa$cluster.n <- length(unique(i.did.dat$CLUSTER_ID))
+      i.did.csa$unique.trt.yrs <- length(unique(i.did.dat$first.mine.year))
+      i.did.csa$zeroes <- zeroes
+      i.did.csa$pre.length <- t
+      
+      i.did$buffer.size <- "10km.master"
+      i.did$country <- country.j
+      i.did$cluster.n <- length(unique(i.did.dat$CLUSTER_ID))
+      i.did$unique.trt.yrs <- length(unique(i.did.dat$first.mine.year))
+      i.did$zeroes <- zeroes
+      i.did$pre.length <- t
+      did.all <- rbind(did.all, i.did, i.did.csa)  
+    }
     
     i.did$buffer.size <- "10km.master"
     i.did$country <- country.j
@@ -97,7 +136,4 @@ save(did.all, file = "Outputs/DiD.tables/all.GAR.direct.indirect.DiD.RData")
 #save(did.all, file = "Outputs/DiD.tables/all.CSA.direct.indirect.DiD.RData")
 
 
-
-
-
-
+## Direct and indirect 0-5 km buffer -------------------------------------------
