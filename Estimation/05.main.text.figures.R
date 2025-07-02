@@ -49,21 +49,20 @@ did.plt.ls <- list()
 yr.since <- 10
 
 t <- -5
-i <- 2
+i <- 1
 j <- 1
 
 GAR.grid <- expand.grid(method.i = "Gardner 2022", 
-                        buffer.i = buffer.ls, t = c(-5, -10))
+                        buffer.i = buffer.ls, pre.period = c(-5, -10))
 CSA.grid <- expand.grid(method.i = "Callaway & Sant'Anna 2021", 
-                        buffer.i = buffer.ls, t = "csa")
+                        buffer.i = buffer.ls, pre.period = "csa")
 plt.grid <- rbind(GAR.grid, CSA.grid)
 
 for(i in 1:nrow(plt.grid)) {
-  for (i in 1:2) {
-    for (j in 1:4){
-     cat(t, i, j, "\n")
-      method.i <- method.ls[[i]]
-      buffer.i <- buffer.ls[[j]]
+
+      method.i <- plt.grid[i,]$method.i
+      buffer.i <- plt.grid[i,]$buffer.i
+      t <- plt.grid[i,]$pre.period
       
       nat.i <- did.df %>% filter(year.since >= -5 & year.since <= yr.since,
                                  pre.period == t,
@@ -127,33 +126,55 @@ for(i in 1:nrow(plt.grid)) {
           did.plt.ls[[paste0("temporal.", buffer.i, ".", method.i, ".pre",t)]] <- temp.plt.i 
           did.plt.ls[[paste0("coefs.yr.horiz.", buffer.i, ".", method.i, ".pre",t)]] <- coef.horiz.plt.i
         } 
-  
-    }
-  }
 }
 
-# GAR
-GAR.did.horiz.plt.arr <- ggarrange(did.plt.ls$`temporal.1km.Gardner 2022`,
-                             did.plt.ls$`coefs.yr.horiz.1km.Gardner 2022`,
-                             did.plt.ls$`temporal.5km.Gardner 2022`,
-                             did.plt.ls$`coefs.yr.horiz.5km.Gardner 2022`,
-                             did.plt.ls$`temporal.10km.Gardner 2022`,
-                             did.plt.ls$`coefs.yr.horiz.10km.Gardner 2022`,
-                             did.plt.ls$`temporal.20km.Gardner 2022`,
-                             did.plt.ls$`coefs.yr.horiz.20km.Gardner 2022`,
+
+# GAR5
+GAR5.did.horiz.plt.arr <- ggarrange(did.plt.ls$`temporal.1km.Gardner 2022.pre-5`,
+                             did.plt.ls$`coefs.yr.horiz.1km.Gardner 2022.pre-5`,
+                             did.plt.ls$`temporal.5km.Gardner 2022.pre-5`,
+                             did.plt.ls$`coefs.yr.horiz.5km.Gardner 2022.pre-5`,
+                             did.plt.ls$`temporal.10km.Gardner 2022.pre-5`,
+                             did.plt.ls$`coefs.yr.horiz.10km.Gardner 2022.pre-5`,
+                             did.plt.ls$`temporal.20km.Gardner 2022.pre-5`,
+                             did.plt.ls$`coefs.yr.horiz.20km.Gardner 2022.pre-5`,
                              ncol = 2, nrow = 4,
                              labels = c("a", "b", "c", "d", "e", "f", "g", "h"),
                              widths = c(1, 1.7),
                              align = "hv", hjust = 0)
 
-GAR.did.horiz.plt.arr2 <- GAR.did.horiz.plt.arr +
+GAR5.did.horiz.plt.arr2 <- GAR5.did.horiz.plt.arr +
   annotation_custom(text_grob("0-1 km", face = "bold", size= 12), xmin = 0.90, xmax = 1, ymin = 0.95, ymax = 1.0) +
   annotation_custom(text_grob("1-5 km", face = "bold", size= 12), xmin = 0.90, xmax = 1, ymin = 0.7, ymax = 0.75) +
   annotation_custom(text_grob("5-10 km", face = "bold", size= 12), xmin = 0.90, xmax = 1, ymin = 0.45, ymax = 0.5) +
   annotation_custom(text_grob("10-20 km", face = "bold", size= 12), xmin = 0.90, xmax = 1, ymin = 0.2, ymax = 0.25)
   
-ggsave(path = "Outputs/Figures/DiD", filename = "GAR.DiD.Fig2.horiz.10yr.png",
-       GAR.did.horiz.plt.arr2, bg = "white",
+ggsave(path = "Outputs/Figures/DiD", filename = "GAR5.DiD.Fig2.horiz.10yr.png",
+       GAR5.did.horiz.plt.arr2, bg = "white",
+       device = "png", width = 25, height = 25, units = "cm") 
+
+# GAR10
+GAR10.did.horiz.plt.arr <- ggarrange(did.plt.ls$`temporal.1km.Gardner 2022.pre-10`,
+                                    did.plt.ls$`coefs.yr.horiz.1km.Gardner 2022.pre-10`,
+                                    did.plt.ls$`temporal.5km.Gardner 2022.pre-10`,
+                                    did.plt.ls$`coefs.yr.horiz.5km.Gardner 2022.pre-10`,
+                                    did.plt.ls$`temporal.10km.Gardner 2022.pre-10`,
+                                    did.plt.ls$`coefs.yr.horiz.10km.Gardner 2022.pre-10`,
+                                    did.plt.ls$`temporal.20km.Gardner 2022.pre-10`,
+                                    did.plt.ls$`coefs.yr.horiz.20km.Gardner 2022.pre-10`,
+                                    ncol = 2, nrow = 4,
+                                    labels = c("a", "b", "c", "d", "e", "f", "g", "h"),
+                                    widths = c(1, 1.7),
+                                    align = "hv", hjust = 0)
+
+GAR10.did.horiz.plt.arr2 <- GAR10.did.horiz.plt.arr +
+  annotation_custom(text_grob("0-1 km", face = "bold", size= 12), xmin = 0.90, xmax = 1, ymin = 0.95, ymax = 1.0) +
+  annotation_custom(text_grob("1-5 km", face = "bold", size= 12), xmin = 0.90, xmax = 1, ymin = 0.7, ymax = 0.75) +
+  annotation_custom(text_grob("5-10 km", face = "bold", size= 12), xmin = 0.90, xmax = 1, ymin = 0.45, ymax = 0.5) +
+  annotation_custom(text_grob("10-20 km", face = "bold", size= 12), xmin = 0.90, xmax = 1, ymin = 0.2, ymax = 0.25)
+
+ggsave(path = "Outputs/Figures/DiD", filename = "GAR10.DiD.Fig2.horiz.10yr.png",
+       GAR10.did.horiz.plt.arr2, bg = "white",
        device = "png", width = 25, height = 25, units = "cm") 
 
 # CSA
