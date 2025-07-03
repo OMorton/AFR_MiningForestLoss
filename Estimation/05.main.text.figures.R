@@ -41,6 +41,10 @@ ssa.summary <-ssa.did %>% filter(year.since %in% c(5,10),
 write.csv(national.summary, "Outputs/DiD.tables/national.did.summary.csv")
 write.csv(ssa.summary, "Outputs/DiD.tables/SSA.did.summary.csv")
 
+## for text
+national.summary %>% filter(method == "Callaway & Sant'Anna 2021", year.since == 10) %>%
+  group_by(buffer.size, sig) %>% tally()
+
 ## plotting set up
 method.ls <- unique(did.df$method)
 buffer.ls <- c("1km", "5km", "10km", "20km")
@@ -97,6 +101,7 @@ for(i in 1:nrow(plt.grid)) {
                    colour = "red", size = 1) +
         geom_hline(yintercept = 0) +
         geom_vline(xintercept = -1, linetype = "dashed") +
+        coord_cartesian(ylim = c(-10, 30), expand = FALSE) +
         xlab("Years since mining") +
         ylab("Additional \n deforestation (pp)") +
         theme_minimal() + 
@@ -193,31 +198,24 @@ CSA.did.horiz.plt.arr2 <- CSA.did.horiz.plt.arr +
   annotation_custom(text_grob("10-20 km", face = "bold", size= 12), xmin = 0.90, xmax = 1, ymin = 0.2, ymax = 0.25)
 
 
-ggsave(path = "Outputs/Figures/SM", filename = "CSA.DiD.Fig2.10yr.png",
+ggsave(path = "Outputs/Figures/DiD", filename = "CSA.DiD.Fig2.10yr.png",
        CSA.did.horiz.plt.arr2, bg = "white",
        device = "png", width = 25, height = 25, units = "cm")
 
 
 ## Figure 3 direct and indirect effects ----------------------------------------
 
-# orginal file - equivalent to the 0-10km snapshot after 10 years, with 10 years 
-# of pre data.
-#load("Outputs/DiD.tables/all.GAR.direct.indirect.DiD.RData")
-
 ## get all data in
-load("Outputs/DiD.tables/all.direct.indirect.DiD.10km.Jul25.RData")
-dir.indir.10km <- did.all %>% mutate(pre.length = ifelse(is.na(pre.length), "csa", pre.length))
 load("Outputs/DiD.tables/all.direct.indirect.DiD.5km.Jul25.RData")
-dir.indir.5km <- did.all %>% mutate(pre.length = ifelse(is.na(pre.length), "csa", pre.length))
-
-dir.indir.all <- rbind(dir.indir.10km, dir.indir.5km) %>% 
-                  filter(cluster.n > 29)
+dir.indir.5km <- did.all %>%
+  mutate(pre.length = ifelse(is.na(pre.length), "csa", pre.length)) %>% 
+  filter(cluster.n > 29)
 
 # set up plotting grid
-GAR.grid <- expand.grid(method.i = "Gardner 2022", year.since = c(5, 10),
-                        buffer.i = c("5km.master", "10km.master"), pre.length = c(-5, -10))
-CSA.grid <- expand.grid(method.i = "Callaway & Sant'Anna 2021", year.since = c(5, 10),
-                        buffer.i = c("5km.master", "10km.master"), pre.length = "csa")
+GAR.grid <- expand.grid(method.i = "Gardner 2022", year.since = c(5),
+                        buffer.i = c("5km.master"), pre.length = c(-5, -10))
+CSA.grid <- expand.grid(method.i = "Callaway & Sant'Anna 2021", year.since = c(5),
+                        buffer.i = c("5km.master"), pre.length = "csa")
 plt.grid <- rbind(GAR.grid, CSA.grid)
 
 i <- 1
@@ -228,7 +226,7 @@ for (i in 1:nrow(plt.grid)) {
   pre.length.i <- plt.grid[i,]$pre.length
   buffer.i <- plt.grid[i,]$buffer.i
   
-  ratio.i <- dir.indir.all %>% 
+  ratio.i <- dir.indir.5km %>% 
     filter(y.var %in% c("direct.forest.loss","indirect.forest.loss"),
            year.since == year.since.i, pre.length == pre.length.i, 
            method == method.i, buffer.size == buffer.i) %>%
@@ -246,20 +244,56 @@ for (i in 1:nrow(plt.grid)) {
   ratio.store <- rbind(ratio.store, ratio.i)
 }
 
-write.csv(ratio.store, "Outputs/DiD.tables/national.ratios.all.csv")
+write.csv(ratio.store, "Outputs/DiD.tables/national.ratios.all.FINAL.csv")
+
+
+
+## xy plot
+load("X:/morton_research/User/bi1om/Research/Mining/AfricaWideMining_ForestLoss/Analysis/Data/NationalMining/loss.summaries/all.countries.mining.loss.50p.df.RData")
+country.mining.total.loss.df <- country.mining.total.loss.df %>% 
+  mutate(country = ifelse(country == "Côte d'Ivoire", "Côte d_Ivoire", country))
+country.ratio.area <- left_join(ratio.store, country.mining.total.loss.df, by = "country") %>%
+  filter(method == "Callaway & Sant'Anna 2021") %>%
+  mutate(missing.ci = ifelse(is.na(ratio.ci), "yes", "no"),
+         ratio.ci = ifelse(is.na(ratio.ci), 0, ratio.ci),
+         missing.mean = ifelse(is.na(ratio.mean), "yes", "no"),
+         ratio.mean = ifelse(is.na(ratio.mean), 0, ratio.mean))
+
+# xy plotting
+xy.plt.mean <- ggplot(filter(country.ratio.area, missing.mean == "no"), 
+                   aes(total.mined.area, ratio.mean,
+                       size = total.mined.area, shape = missing.ci,
+                       colour = ratio.mean)) +
+  geom_point(data = filter(country.ratio.area, missing.ci == "yes"), 
+             colour = "grey50", fill = "grey50") +
+  geom_point(fill = NA) +
+  scale_color_gradient(low = "#ffeda0", high = "#800026") +
+  scale_shape_manual(values = c(19, 21)) +
+  #geom_label(aes(label = iso3)) +
+  ggrepel::geom_text_repel(aes(label = iso3), size = 3, colour = "black" ) +
+  #scale_x_log10() +
+  #scale_y_log10() +
+  xlab("Mining forest loss (ha)") +
+  ylab("Ratio of indirect forest loss") +
+  #coord_cartesian(ylim = c(-15, 260)) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+
 
 ## maps
 library(rnaturalearth)
 afr.map <- ne_countries(type = "countries", continent = "Africa", returnclass = "sf") %>%
   select(iso_a3,iso_a3_eh, geometry)
-ratio.all.iso <- gardner.ratio.sum %>% 
-  left_join(afr.map, by = c("iso3" = "iso_a3"))
+ratio.all.iso <- country.ratio.area %>% 
+  left_join(afr.map, by = c("iso3" = "iso_a3")) %>% 
+  mutate(ratio.ci = ifelse(ratio.ci == 0, NA, ratio.ci))
 
-afr.inc <- afr.map %>% filter(iso_a3 %in% unique(gardner.ratio.sum$iso3))
+afr.inc <- afr.map %>% filter(iso_a3 %in% unique(country.ratio.area$iso3))
 
-map.ratio <- ggplot(ratio.all.iso, aes(fill = ratio)) +
-  geom_sf(data = afr.map, aes(geometry = geometry), fill = "grey90") +
-  geom_sf(aes(geometry = geometry)) +
+map.ratio <- ggplot(ratio.all.iso, aes(fill = ratio.ci)) +
+  geom_sf(data = afr.map, aes(geometry = geometry), fill = "grey90", colour = "grey30") +
+  geom_sf(aes(geometry = geometry), colour = "grey30") +
   scale_fill_gradient(low ="#ffeda0", high = "#800026", 
                       "Ratio of indirect forest loss") +
   theme_void() +
@@ -268,40 +302,13 @@ map.ratio <- ggplot(ratio.all.iso, aes(fill = ratio)) +
         legend.margin=margin(0,0,0,0),
         legend.box.margin=margin(10,10,10,10))
 
-## xy plot
-load("X:/morton_research/User/bi1om/Research/Mining/AfricaWideMining_ForestLoss/Analysis/Data/NationalMining/loss.summaries/all.countries.mining.loss.50p.df.RData")
-country.mining.total.loss.df <- country.mining.total.loss.df %>% 
-  mutate(country = ifelse(country == "Côte d'Ivoire", "Côte d_Ivoire", country))
-country.ratio.area <- left_join(ratio.all.iso, country.mining.total.loss.df, by = "country") %>%
-  mutate(missing = ifelse(is.na(ratio), "yes", "no"),
-         ratio = ifelse(is.na(ratio), 0, ratio))
 
-(country.xy.plt <- ggplot(filter(country.ratio.area, missing == "no"), 
-                          aes(total.mined.area, ratio, shape = small.cluster,
-                              size = total.mined.area, colour = ratio)) +
-    geom_point(data = filter(country.ratio.area, missing == "yes"), colour = "grey50") +
-    geom_point() +
-    scale_color_gradient(low = "#ffeda0", high = "#800026") +
-    scale_shape_manual(values = c(19, 21)) +
-    geom_point() +
-    #geom_label(aes(label = iso3)) +
-    ggrepel::geom_text_repel(aes(label = iso3), size = 3, colour = "black" ) +
-    ggrepel::geom_text_repel(data = filter(country.ratio.area, missing == "yes"),
-                             aes(label = iso3), size = 3, colour = "black" ) +
-    
-    #scale_x_log10() +
-    #scale_y_log10() +
-    xlab("Mining forest loss (ha)") +
-    ylab("Ratio of indirect forest loss") +
-    coord_cartesian(ylim = c(-15, 260)) +
-    theme_minimal() +
-    theme(legend.position = "none"))
 
-map.xy.arr <- ggarrange(map.ratio, country.xy.plt,
+map.xy.arr <- ggarrange(map.ratio, xy.plt.mean,
                         labels = c("a", "b"), common.legend = TRUE,
                         legend = "bottom", widths = c(1, 1.4))
 
-ggsave(path = "Outputs/Figures/DiD", filename = "map.ratio.xy.png",
+ggsave(path = "Outputs/Figures/DiD", filename = "map.mean.ratio.xy.png",
        map.xy.arr, bg = "white",
        device = "png", width = 7, height = 4, units = "in") 
 
@@ -335,11 +342,11 @@ nat.comm.iso <- add.iso(nat.comm.df) %>%
 afr.inc <- afr.map %>% filter(iso_a3 %in% unique(nat.comm.iso$iso3))
 
 # get n
-load("Outputs/DiD.tables/SSA.commodities.tidy.new.RData")
+load("Outputs/DiD.tables/SSA.ALL.commodities.tidy.Jul25.RData")
 comm.n <- comm.did.out %>% group_by(commodity) %>% summarise(n = unique(cluster.n))
 
 col.ls <- c("#3690c0", "#cc4c02", "#bdbdbd", "#fec44f", "#800026", "#9e9ac8",
-            "#525252", "black", "#d9f0a3")
+            "#525252", "black", "black", "#d9f0a3")
 comm.map.ls <- list()
 i <- 1
 
@@ -365,9 +372,10 @@ for (i in 1:length(top.comm$material)) {
 ## plot DiD
 method.ls <- unique(comm.did.out$method)
 comm.ls <- unique(comm.did.out$commodity)
+
 buff.ls <- c(1, 5, 10, 20)
 col.ls <- c("#3690c0", "#cc4c02", "#bdbdbd", "#fec44f", "#800026", "#9e9ac8",
-            "#525252", "black", "#d9f0a3")
+            "#525252", "black","black", "#d9f0a3")
 did.plt.ls <- list()
 
 i <- 1
@@ -385,15 +393,24 @@ for (m in 1:2) {
       comm.i.c <- comm.did.out %>% 
         filter(commodity == comm.c, method == method.i, 
                buffer.size == paste0(buff.j, "km"),
-               year.since >= -5 & year.since <= 10)
-   
+               year.since >= -5 & year.since <= 10,
+               pre.period == -5 | is.na(pre.period))
+      
+      ## add consistent axis per row
+      range.i <- comm.did.out %>% 
+        filter(commodity == comm.c, method == method.i,
+               year.since >= -5 & year.since <= 10,
+               pre.period == -5 | is.na(pre.period))
+      maxy <- max(range.i$uci)
+      miny <- min(range.i$lci)
+      
       comm.plt <- ggplot(comm.i.c, aes(year.since, estimate)) +
         geom_ribbon(aes(ymin = lci, ymax = uci), linetype = "dashed",
                     colour = col.c, fill = col.c, alpha = .3) +
         geom_line(size = 1, colour =col.c ) + 
         geom_hline(yintercept = 0) +
         geom_vline(xintercept = -1, linetype = "dashed") +
-       # coord_cartesian(ylim = c(-5, 15)) +
+        coord_cartesian(ylim = c(miny, maxy), expand = F) +
         xlab("Years since mining") +
         ylab("Additional \n deforestation (pp)") +
         theme_minimal(base_size = 12) 
@@ -405,62 +422,94 @@ for (m in 1:2) {
 
 empty <- ggplot() + theme_void()
 
-comm.map.gardner.arr <- ggarrange(empty,
-                                  ggarrange(comm.plt.ls$`temporal.Cobalt.1km.Gardner 2022`,
-                              comm.plt.ls$`temporal.Cobalt.5km.Gardner 2022`,
-                              comm.plt.ls$`temporal.Cobalt.10km.Gardner 2022`,
+comm.map.csa.arr <- ggarrange(empty,
+                                  ggarrange(comm.plt.ls$`temporal.Cobalt.1km.Callaway & Sant'Anna 2021`,
+                              comm.plt.ls$`temporal.Cobalt.5km.Callaway & Sant'Anna 2021`,
+                              comm.plt.ls$`temporal.Cobalt.10km.Callaway & Sant'Anna 2021`,
                               comm.map.ls$Cobalt.map,
-                              comm.plt.ls$`temporal.Copper.1km.Gardner 2022`,
-                              comm.plt.ls$`temporal.Copper.5km.Gardner 2022`,
-                              comm.plt.ls$`temporal.Copper.10km.Gardner 2022`,
+                              comm.plt.ls$`temporal.Copper.1km.Callaway & Sant'Anna 2021`,
+                              comm.plt.ls$`temporal.Copper.5km.Callaway & Sant'Anna 2021`,
+                              comm.plt.ls$`temporal.Copper.10km.Callaway & Sant'Anna 2021`,
                               comm.map.ls$Copper.map,
-                              comm.plt.ls$`temporal.Diamonds.1km.Gardner 2022`,
-                              comm.plt.ls$`temporal.Diamonds.5km.Gardner 2022`,
-                              comm.plt.ls$`temporal.Diamonds.10km.Gardner 2022`,
-                              comm.map.ls$Diamonds.map,
-                              comm.plt.ls$`temporal.Gold.1km.Gardner 2022`,
-                              comm.plt.ls$`temporal.Gold.5km.Gardner 2022`,
-                              comm.plt.ls$`temporal.Gold.10km.Gardner 2022`,
-                              comm.map.ls$Gold.map,
-                              comm.plt.ls$`temporal.Iron.1km.Gardner 2022`,
-                              comm.plt.ls$`temporal.Iron.5km.Gardner 2022`,
-                              comm.plt.ls$`temporal.Iron.10km.Gardner 2022`,
-                              comm.map.ls$Iron.map,
-                              comm.plt.ls$`temporal.Manganese.1km.Gardner 2022`,
-                              comm.plt.ls$`temporal.Manganese.5km.Gardner 2022`,
-                              comm.plt.ls$`temporal.Manganese.10km.Gardner 2022`,
+                              comm.plt.ls$`temporal.Manganese.1km.Callaway & Sant'Anna 2021`,
+                              comm.plt.ls$`temporal.Manganese.5km.Callaway & Sant'Anna 2021`,
+                              comm.plt.ls$`temporal.Manganese.10km.Callaway & Sant'Anna 2021`,
                               comm.map.ls$Manganese.map,
-                              comm.plt.ls$`temporal.Silver.1km.Gardner 2022`,
-                              comm.plt.ls$`temporal.Silver.5km.Gardner 2022`,
-                              comm.plt.ls$`temporal.Silver.10km.Gardner 2022`,
+                              comm.plt.ls$`temporal.Diamonds.1km.Callaway & Sant'Anna 2021`,
+                              comm.plt.ls$`temporal.Diamonds.5km.Callaway & Sant'Anna 2021`,
+                              comm.plt.ls$`temporal.Diamonds.10km.Callaway & Sant'Anna 2021`,
+                              comm.map.ls$Diamonds.map,
+                              comm.plt.ls$`temporal.Gold.1km.Callaway & Sant'Anna 2021`,
+                              comm.plt.ls$`temporal.Gold.5km.Callaway & Sant'Anna 2021`,
+                              comm.plt.ls$`temporal.Gold.10km.Callaway & Sant'Anna 2021`,
+                              comm.map.ls$Gold.map,
+                              comm.plt.ls$`temporal.Silver.1km.Callaway & Sant'Anna 2021`,
+                              comm.plt.ls$`temporal.Silver.5km.Callaway & Sant'Anna 2021`,
+                              comm.plt.ls$`temporal.Silver.10km.Callaway & Sant'Anna 2021`,
                               comm.map.ls$Silver.map,
-                              comm.plt.ls$`temporal.Uranium.1km.Gardner 2022`,
-                              comm.plt.ls$`temporal.Uranium.5km.Gardner 2022`,
-                              comm.plt.ls$`temporal.Uranium.10km.Gardner 2022`,
-                              comm.map.ls$Uranium.map,
-                              ncol =4, nrow = 8, widths = c(1,1,1,.5),
+                              comm.plt.ls$`temporal.Iron.1km.Callaway & Sant'Anna 2021`,
+                              comm.plt.ls$`temporal.Iron.5km.Callaway & Sant'Anna 2021`,
+                              comm.plt.ls$`temporal.Iron.10km.Callaway & Sant'Anna 2021`,
+                              comm.map.ls$Iron.map,
+                              # comm.plt.ls$`temporal.Uranium.1km.Callaway & Sant'Anna 2021`,
+                              # comm.plt.ls$`temporal.Uranium.5km.Callaway & Sant'Anna 2021`,
+                              # comm.plt.ls$`temporal.Uranium.10km.Callaway & Sant'Anna 2021`,
+                              # comm.map.ls$Uranium.map,
+                              # comm.plt.ls$`temporal.Titanium.1km.Callaway & Sant'Anna 2021`,
+                              # comm.plt.ls$`temporal.Titanium.5km.Callaway & Sant'Anna 2021`,
+                              # comm.plt.ls$`temporal.Titanium.10km.Callaway & Sant'Anna 2021`,
+                              # comm.map.ls$Titanium.map,
+                              ncol =4, nrow = 7, widths = c(1,1,1,.5),
                               labels = c("a - Cobalt", "", "", "",
                                          "b - Copper", "", "", "",
-                                         "c - Diamonds", "", "", "",
-                                         "d - Gold", "", "", "",
-                                         "e - Iron", "", "", "",
-                                         "f - Manganese", "", "", "",
-                                         "g - Silver", "", "", "",
-                                         "h - Uranium", "", "", ""),
+                                         "c - Manganese", "", "", "",
+                                         "d - Diamonds", "", "", "",
+                                         "e - Gold", "", "", "",
+                                         "f - Silver", "", "", "",
+                                         "g - Iron", "", "", ""
+                                         #"h - Uranium", "", "", ""
+                                         #"h - Titanium", "", "", ""
+                                         ),
                               hjust = 0, vjust = 0),
                               ncol = 1, heights = c(1, 40))
 
-comm.map.gardner.arr2 <- comm.map.gardner.arr +
+comm.map.csa.arr2 <- comm.map.csa.arr +
   annotation_custom(text_grob("0-1 km", face = "bold", size= 16), xmin = 0.6/3.5, xmax = 0.6/3.5, ymin = 0.97, ymax = 1.0) +
   annotation_custom(text_grob("1-5 km", face = "bold", size= 16), xmin = 1.6/3.5, xmax = 1.6/3.5, ymin = 0.97, ymax = 1.0) +
   annotation_custom(text_grob("5-10 km", face = "bold", size= 16), xmin = 2.6/3.5, xmax = 2.6/3.5, ymin = 0.97, ymax = 1.0)
 
 
-# ggsave(path = "Outputs/Figures/DiD", filename = "GAR.commodities.map.fixedscale.png",
-#        comm.map.gardner.arr2, bg = "white",
-#        device = "png", width = 35, height = 40, units = "cm")  
-
-ggsave(path = "Outputs/Figures/DiD", filename = "GAR.commodities.map.png",
-       comm.map.gardner.arr2, bg = "white",
+ggsave(path = "Outputs/Figures/DiD", filename = "CSA.commodities.map.png",
+       comm.map.csa.arr2, bg = "white",
        device = "png", width = 35, height = 40, units = "cm")  
 
+# ggsave(path = "Outputs/Figures/DiD", filename = "CSA.commodities.map.FIXEDSCALE.png",
+#        comm.map.csa.arr2, bg = "white",
+#        device = "png", width = 35, height = 40, units = "cm")
+
+## SM commodity plots
+comm.map.csa.sm.arr <- ggarrange(empty,
+                              ggarrange(
+                                        comm.plt.ls$`temporal.Uranium.1km.Callaway & Sant'Anna 2021`,
+                                        comm.plt.ls$`temporal.Uranium.5km.Callaway & Sant'Anna 2021`,
+                                        comm.plt.ls$`temporal.Uranium.10km.Callaway & Sant'Anna 2021`,
+                                        comm.map.ls$Uranium.map,
+                                        comm.plt.ls$`temporal.Titanium.1km.Callaway & Sant'Anna 2021`,
+                                        comm.plt.ls$`temporal.Titanium.5km.Callaway & Sant'Anna 2021`,
+                                        comm.plt.ls$`temporal.Titanium.10km.Callaway & Sant'Anna 2021`,
+                                        comm.map.ls$Titanium.map,
+                                        ncol =4, nrow = 2, widths = c(1,1,1,.5),
+                                        labels = c("a - Uranium", "", "", "",
+                                                   "b - Titanium", "", "", ""),
+                                        hjust = 0, vjust = 0),
+                              ncol = 1, heights = c(1, 10))
+
+comm.map.csa.sm.arr2 <- comm.map.csa.sm.arr +
+  annotation_custom(text_grob("0-1 km", face = "bold", size= 16), xmin = 0.6/3.5, xmax = 0.6/3.5, ymin = 0.97, ymax = 1.0) +
+  annotation_custom(text_grob("1-5 km", face = "bold", size= 16), xmin = 1.6/3.5, xmax = 1.6/3.5, ymin = 0.97, ymax = 1.0) +
+  annotation_custom(text_grob("5-10 km", face = "bold", size= 16), xmin = 2.6/3.5, xmax = 2.6/3.5, ymin = 0.97, ymax = 1.0)
+
+
+ggsave(path = "Outputs/Figures/SM", filename = "CSA.SM.commodities.map.FIXEDSCALE.png",
+       comm.map.csa.sm.arr2, bg = "white",
+       device = "png", width = 35, height = 15, units = "cm")  
