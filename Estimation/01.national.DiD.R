@@ -23,7 +23,7 @@ country.ls <- unique(file.dir$country)
 did.ls <- list()
 did.covar.ls <- list()
 
-j <- 6
+j <- 10
 i <- "1km"
 t <--10
 
@@ -61,6 +61,8 @@ for (t in c(-5, -10)) {
                                    xformula = NULL, 
                                    method = c("csa", "gardner"), GAR.pre.period = t)
       
+      # only run the csa covar once per loop (t is irrelevant)
+      if(t == -10) {
       i.did.dat <- scale.tidy(i.did.dat)
       
       i.did.covar.fit <- data.frame(year.since = NA, estimate = NA, lci = NA, uci  = NA,
@@ -68,29 +70,49 @@ for (t in c(-5, -10)) {
       try(i.did.covar.fit <- fit.dynamic.DiD(i.did.dat,
                       yname = "cumulative.forest.loss.perc",
                       xformula = ~ slope.z + elevation.z + pop.density.z + travel.time.z, 
-                      method = c("gardner", "csa"), GAR.pre.period = t),
+                      method = c("csa"), GAR.pre.period = t),
           silent = TRUE)
-      
+      } else {
+        i.did.dat <- scale.tidy(i.did.dat)
+        
+        i.did.covar.fit <- data.frame(year.since = NA, estimate = NA, lci = NA, uci  = NA,
+                                      p.value  = NA, method = NA, y.var = NA)
+        try(i.did.covar.fit <- fit.dynamic.DiD(i.did.dat,
+                                               yname = "cumulative.forest.loss.perc",
+                                               xformula = ~ slope.z + elevation.z + pop.density.z + travel.time.z, 
+                                               method = c("gardner"), GAR.pre.period = t),
+            silent = TRUE)
+      }
+      if(t == -5) {
       i.did.fit$buffer.size <- i
       i.did.fit$country <- country.j
       i.did.fit$cluster.n <- length(mine.cluster.points.df$CLUSTER_ID)
       i.did.fit$unique.trt.yrs <- length(unique(mine.cluster.points.df$first.mine.year))
       i.did.fit$zeroes <- zeroes
       i.did.fit$pre.period <- t
-      
-      
       if (!is.null(i.did.covar.fit)) {
-      i.did.covar.fit$buffer.size <- i
-      i.did.covar.fit$country <- country.j
-      i.did.covar.fit$cluster.n <- length(mine.cluster.points.df$CLUSTER_ID)
-      i.did.covar.fit$unique.trt.yrs <- length(unique(mine.cluster.points.df$first.mine.year))
-      i.did.covar.fit$zeroes <- zeroes
-      i.did.covar.fit$pre.period <- t
-      
+        i.did.covar.fit$buffer.size <- i
+        i.did.covar.fit$country <- country.j
+        i.did.covar.fit$cluster.n <- length(mine.cluster.points.df$CLUSTER_ID)
+        i.did.covar.fit$unique.trt.yrs <- length(unique(mine.cluster.points.df$first.mine.year))
+        i.did.covar.fit$zeroes <- zeroes
+        i.did.covar.fit$pre.period <- t
       }
-      
       did.ls[[paste0(country.j, ".", i, ".pre", t)]] <- i.did.fit 
       did.covar.ls[[paste0(country.j, ".", i, ".pre", t)]] <- i.did.covar.fit 
+      
+      }else{
+      if (!is.null(i.did.covar.fit)) {
+        i.did.covar.fit$buffer.size <- i
+        i.did.covar.fit$country <- country.j
+        i.did.covar.fit$cluster.n <- length(mine.cluster.points.df$CLUSTER_ID)
+        i.did.covar.fit$unique.trt.yrs <- length(unique(mine.cluster.points.df$first.mine.year))
+        i.did.covar.fit$zeroes <- zeroes
+        i.did.covar.fit$pre.period <- t
+      }
+        did.ls[[paste0(country.j, ".", i, ".pre", t)]] <- i.did.fit 
+        did.covar.ls[[paste0(country.j, ".", i, ".pre", t)]] <- i.did.covar.fit 
+            }
     }
   }
 }
