@@ -134,12 +134,12 @@ cov.path <- "X:/morton_research/User/bi1om/Research/Mining/AfricaWideMining_Fore
 file.dir <- data.frame(file = list.files(path = all.path, pattern = "5km.master")) %>% 
   mutate(country = sub(".forest.*", "", file),
          buffer = "10km.master")%>%
-  mutate(mining.only.file.1km = list.files(path = min.only.path, pattern = "1km"),
-         mining.only.file.5km = list.files(path = min.only.path, pattern = "5km"))
+  mutate(mining.only.file = list.files(path = min.only.path, pattern = "5km.master"))
 
 country.ls <- unique(file.dir$country)
 did.all <- list()
 j <- 6
+t <- -5
 for (t in c(-5, -10)) {
   for (j in 1:length(country.ls)) {
     cat(j, "out of", length(country.ls), "\n")
@@ -152,21 +152,30 @@ for (t in c(-5, -10)) {
     mine.all.forest.loss.df <- mine.buffer.forest.loss.df %>%
       select(CLUSTER_ID, first.mine.year, buffer.size, loss.year, 
              forest.cells.2000, cumulative.forest.loss, cumulative.forest.loss.prop)
+    
     # get files for mining only forest loss
-    load(paste0(min.only.path, nat.buff$mining.only.file.1km))
-    direct.1km <- mine.buffer.forest.loss.df %>%
-      select(CLUSTER_ID, loss.year, cumulative.forest.loss, forest.cells.2000) %>%
-      rename("cumulative.1km" = "cumulative.forest.loss", 
-             "forest.cells.2000.1km" = "forest.cells.2000")
-    load(paste0(min.only.path, nat.buff$mining.only.file.5km))
-    direct.5km <- mine.buffer.forest.loss.df
-    direct.5km.master <- left_join(direct.5km, direct.1km) %>%
-      mutate(cumulative.forest.loss = cumulative.forest.loss + cumulative.1km,
-             buffer.size = "5km Master")
-    mine.direct.forest.loss.df <- direct.5km.master %>%
+    load(paste0(min.only.path, nat.buff$mining.only.file))
+    mine.direct.forest.loss.df <- mine.buffer.forest.loss.df %>%
       rename("direct.forest.loss" = "cumulative.forest.loss") %>%
+      mutate(buffer.size = "5km Master") %>%
       select(CLUSTER_ID, first.mine.year, buffer.size, loss.year, 
              direct.forest.loss)
+    
+    # # get files for mining only forest loss
+    # load(paste0(min.only.path, nat.buff$mining.only.file.1km))
+    # direct.1km <- mine.buffer.forest.loss.df %>%
+    #   select(CLUSTER_ID, loss.year, cumulative.forest.loss, forest.cells.2000) %>%
+    #   rename("cumulative.1km" = "cumulative.forest.loss", 
+    #          "forest.cells.2000.1km" = "forest.cells.2000")
+    # load(paste0(min.only.path, nat.buff$mining.only.file.5km))
+    # direct.5km <- mine.buffer.forest.loss.df
+    # direct.5km.master <- left_join(direct.5km, direct.1km) %>%
+    #   mutate(cumulative.forest.loss = cumulative.forest.loss + cumulative.1km,
+    #          buffer.size = "5km Master")
+    # mine.direct.forest.loss.df <- direct.5km.master %>%
+    #   rename("direct.forest.loss" = "cumulative.forest.loss") %>%
+    #   select(CLUSTER_ID, first.mine.year, buffer.size, loss.year, 
+    #          direct.forest.loss)
     
     dir.indir.loss <- left_join(mine.all.forest.loss.df, mine.direct.forest.loss.df,
                                 by = c("CLUSTER_ID", "first.mine.year", "buffer.size", "loss.year")) %>%
@@ -236,7 +245,7 @@ for (t in c(-5, -10)) {
       i.did.csa$zeroes <- zeroes
       i.did.csa$pre.length <- NA
       
-      i.did$buffer.size <- "10km.master"
+      i.did$buffer.size <- "5km.master"
       i.did$country <- country.j
       i.did$cluster.n <- length(unique(i.did.dat$CLUSTER_ID))
       i.did$unique.trt.yrs <- length(unique(i.did.dat$first.mine.year))
