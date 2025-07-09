@@ -135,5 +135,5 @@ for (t in c(-5, -10)) {
   }
 }
 
-save(ssa.did, file = "Outputs/DiD.tables/SSA.tidy.1km.RData")
-save(ssa.did.covar, file = "Outputs/DiD.tables/SSA.tidy.1km.covar.RData")
+save(ssa.did, file = "Outputs/DiD.tables/SSA.tidy.Jul25.RData")
+save(ssa.did.covar, file = "Outputs/DiD.tables/SSA.tidy.covar.Jul25.RData")

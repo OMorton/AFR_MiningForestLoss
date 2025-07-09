@@ -9,9 +9,14 @@ library(rnaturalearth)
 source("functions.R")
 
 
-## Figure 2 - National and SSA-wide temp and coefs -----------------------------
+## Figure 2 - National and SSA-wide -----------------------------
 load("Outputs/DiD.tables/all.DiD.all.t.Jul25.RData")
 load("Outputs/DiD.tables/SSA.tidy.Jul25.RData")
+
+did.ls <- lapply(did.ls, function(df) {
+  df$buffer.size <- as.character(df$buffer.size)
+  return(df)
+})
 
 did.df <- bind_rows(did.ls) %>% add.iso()
 did.df %>% distinct(country, cluster.n)
@@ -101,7 +106,7 @@ for(i in 1:nrow(plt.grid)) {
                    colour = "red", size = 1) +
         geom_hline(yintercept = 0) +
         geom_vline(xintercept = -1, linetype = "dashed") +
-        coord_cartesian(ylim = c(-10, 30), expand = FALSE) +
+        #coord_cartesian(ylim = c(-10, 30), expand = FALSE) +
         xlab("Years since mining") +
         ylab("Additional \n deforestation (pp)") +
         theme_minimal() + 
@@ -585,3 +590,50 @@ comm.map.gar.arr2 <- comm.map.gar.arr +
 ggsave(path = "Outputs/Figures/SM", filename = "GAR.commodities.map.png",
        comm.map.gar.arr, bg = "white",
        device = "png", width = 35, height = 40, units = "cm")  
+
+## SM 20 km CSA plots
+comm20.map.csa.arr <- ggarrange(empty,
+                              ggarrange(comm.plt.ls$`temporal.Cobalt.20km.Callaway & Sant'Anna 2021`,
+                                        comm.map.ls$Cobalt.map,
+                                        comm.plt.ls$`temporal.Copper.20km.Callaway & Sant'Anna 2021`,
+                                        comm.map.ls$Copper.map,
+                                        comm.plt.ls$`temporal.Manganese.20km.Callaway & Sant'Anna 2021`,
+                                        comm.map.ls$Manganese.map,
+                                        comm.plt.ls$`temporal.Diamonds.20km.Callaway & Sant'Anna 2021`,
+                                        comm.map.ls$Diamonds.map,
+                                        comm.plt.ls$`temporal.Gold.20km.Callaway & Sant'Anna 2021`,
+                                        comm.map.ls$Gold.map,
+                                        comm.plt.ls$`temporal.Silver.20km.Callaway & Sant'Anna 2021`,
+                                        comm.map.ls$Silver.map,
+                                        comm.plt.ls$`temporal.Iron.20km.Callaway & Sant'Anna 2021`,
+                                        comm.map.ls$Iron.map,
+                                        # comm.plt.ls$`temporal.Uranium.1km.Callaway & Sant'Anna 2021`,
+                                        # comm.plt.ls$`temporal.Uranium.5km.Callaway & Sant'Anna 2021`,
+                                        # comm.plt.ls$`temporal.Uranium.10km.Callaway & Sant'Anna 2021`,
+                                        # comm.map.ls$Uranium.map,
+                                        # comm.plt.ls$`temporal.Titanium.1km.Callaway & Sant'Anna 2021`,
+                                        # comm.plt.ls$`temporal.Titanium.5km.Callaway & Sant'Anna 2021`,
+                                        # comm.plt.ls$`temporal.Titanium.10km.Callaway & Sant'Anna 2021`,
+                                        # comm.map.ls$Titanium.map,
+                                        ncol =2, nrow = 7, widths = c(1,.5),
+                                        labels = c("a - Cobalt", "",
+                                                   "b - Copper", "",
+                                                   "c - Manganese", "", 
+                                                   "d - Diamonds", "",
+                                                   "e - Gold", "",
+                                                   "f - Silver", "",
+                                                   "g - Iron", ""
+                                                   #"h - Uranium", "", "", ""
+                                                   #"h - Titanium", "", "", ""
+                                        ),
+                                        hjust = 0, vjust = 0),
+                              ncol = 1, heights = c(1, 40))
+
+comm20.map.csa.arr2 <- comm20.map.csa.arr +
+  annotation_custom(text_grob("10-20 km", face = "bold", size= 16), xmin = 0.6/1.5, xmax = 0.6/1.5, ymin = 0.97, ymax = 1.0)
+
+
+ggsave(path = "Outputs/Figures/SM", filename = "CSA.20km.commodities.map.png",
+       comm20.map.csa.arr2, bg = "white",
+       device = "png", width = 20, height = 40, units = "cm")  
+

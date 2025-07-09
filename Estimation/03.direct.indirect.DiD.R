@@ -138,8 +138,8 @@ file.dir <- data.frame(file = list.files(path = all.path, pattern = "5km.master"
 
 country.ls <- unique(file.dir$country)
 did.all <- list()
-j <- 6
-t <- -5
+j <- 17
+t <- -10
 for (t in c(-5, -10)) {
   for (j in 1:length(country.ls)) {
     cat(j, "out of", length(country.ls), "\n")
