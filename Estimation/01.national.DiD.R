@@ -83,7 +83,6 @@ for (t in c(-5, -10)) {
                                                method = c("gardner"), GAR.pre.period = t),
             silent = TRUE)
       }
-      if(t == -5) {
       i.did.fit$buffer.size <- i
       i.did.fit$country <- country.j
       i.did.fit$cluster.n <- length(mine.cluster.points.df$CLUSTER_ID)
@@ -101,18 +100,6 @@ for (t in c(-5, -10)) {
       did.ls[[paste0(country.j, ".", i, ".pre", t)]] <- i.did.fit 
       did.covar.ls[[paste0(country.j, ".", i, ".pre", t)]] <- i.did.covar.fit 
       
-      }else{
-      if (!is.null(i.did.covar.fit)) {
-        i.did.covar.fit$buffer.size <- i
-        i.did.covar.fit$country <- country.j
-        i.did.covar.fit$cluster.n <- length(mine.cluster.points.df$CLUSTER_ID)
-        i.did.covar.fit$unique.trt.yrs <- length(unique(mine.cluster.points.df$first.mine.year))
-        i.did.covar.fit$zeroes <- zeroes
-        i.did.covar.fit$pre.period <- t
-      }
-        did.ls[[paste0(country.j, ".", i, ".pre", t)]] <- i.did.fit 
-        did.covar.ls[[paste0(country.j, ".", i, ".pre", t)]] <- i.did.covar.fit 
-            }
     }
   }
 }
