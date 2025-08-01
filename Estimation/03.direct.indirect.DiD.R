@@ -373,7 +373,7 @@ for (t in c(-5, -10)) {
       try(i.did.csa <- fit.dynamic.DiD.SSA(i.did.dat,
                                        yname = c("direct.forest.loss","indirect.forest.loss",
                                                  "direct.perc", "indirect.perc"),
-                                       xformula = NULL, 
+                                       xformula = ~ country, 
                                        method = c("csa"), GAR.pre.period = NA), silent = TRUE)
     }
     
