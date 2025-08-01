@@ -125,7 +125,7 @@ save(comm.did.out, file = "Outputs/DiD.tables/SSA.ALL.commodities.tidy.Jul25.RDa
 
 # Primary commodities likely mined per site ------------------------------------
 comm.path <- "X:/morton_research/User/bi1om/Research/Mining/AfricaWideMining_ForestLoss/Analysis/Data/NationalMining/country.mining.commodity.type/"
-comm.dir <- data.frame(file = list.files(path = comm.path, pattern = "commodity.5km.buffer"))
+comm.dir <- data.frame(file = list.files(path = comm.path, pattern = "commodity.5km.buffer.RData"))
 comm.df <- data.frame()
 
 # collate commodity data

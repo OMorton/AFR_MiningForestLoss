@@ -157,6 +157,54 @@ fit.dynamic.DiD <- function(data = x, yname = "cumulative.forest.loss.perc",
   
 }
 
+## Estimate dynamic DiD - SSA --------------------------------------------------------
+fit.dynamic.DiD.SSA <- function(data = x, yname = "cumulative.forest.loss.perc",
+                            xformula = NULL, method = c("csa", "gardner"),
+                            GAR.pre.period = -5){
+  all.coefs.vars <- NULL
+  for (y.var in yname) {
+    buff <- unique(data$buffer.size)
+    cdata <- data
+    gdata <- data
+    
+    if ("gardner" %in% method) {
+      if (is.null(xformula)) {
+        first_stage = ~ 0 | cluster.country.id + year 
+        gdata <- gdata %>% filter(rel.year.first >= GAR.pre.period)
+      } else {
+        first_stage <- stats::as.formula(glue::glue("~ 0 + {xformula} | cluster.country.id + year")[[2]])
+        gdata <- gdata %>% filter(rel.year.first >= GAR.pre.period)
+      }
+      
+      gardner.did <- did2s(data = gdata, yname = y.var, 
+                           treatment = "treatment",
+                           first_stage = first_stage, 
+                           second_stage = ~ i(rel.year.first, ref = c(-1)),
+                           cluster_var = "cluster.country.id", verbose = TRUE)
+      gardner.coefs <- did2s.tidy(gardner.did, buff = buff)
+      gardner.coefs$y.var <- y.var
+    }
+    
+    if ("csa" %in% method) {
+      csa.did <- att_gt(data = cdata, yname = y.var, tname="year",
+                        idname="cluster.country.id", gname = "first.mine.year",
+                        control_group = "notyettreated", base_period = "varying",
+                        xformla = xformula, clustervars = "cluster.country.id", 
+                        bstrap=T, cband=T)
+      
+      csa.coefs <- csa.tidy(csa.did, buff = buff)
+      csa.coefs$y.var <- y.var
+      
+    }
+    if (exists("csa.coefs") & exists("gardner.coefs")) {
+      all.coefs <- rbind(csa.coefs, gardner.coefs)
+    } else { if (exists("csa.coefs") & !exists("gardner.coefs")) {
+      all.coefs <- csa.coefs }else{all.coefs <- gardner.coefs}}
+    all.coefs.vars <- rbind(all.coefs, all.coefs.vars)
+  }
+  return(all.coefs.vars)
+  
+}  
 ## extract DiD2s estimates from a DiD2S fixest object---------------------------
 did2s.tidy <- function(x, buff = buff) {
   broom::tidy(x) %>%
