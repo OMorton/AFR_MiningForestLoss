@@ -210,7 +210,45 @@ ggsave(path = "Outputs/Figures/DiD", filename = "CSA.DiD.Fig2.10yr.png",
 
 ## Figure 3 direct and indirect effects ----------------------------------------
 
-## get all data in
+## get SSA-wide data
+load("Outputs/DiD.tables/SSA.direct.indirect.DiD.5km.Jul25.RData")
+
+SSA.dir.indir.5km <- SSA.did.all %>%
+  mutate(pre.length = ifelse(is.na(pre.length), "csa", pre.length))
+
+# set up plotting grid
+GAR.grid <- expand.grid(method.i = "Gardner 2022", year.since = c(5),
+                        buffer.i = c("5km.master"), pre.length = c(-5, -10))
+CSA.grid <- expand.grid(method.i = "Callaway & Sant'Anna 2021", year.since = c(5),
+                        buffer.i = c("5km.master"), pre.length = "csa")
+plt.grid <- rbind(GAR.grid, CSA.grid)
+
+i <- 1
+SSA.ratio.store <- data.frame()
+for (i in 1:nrow(plt.grid)) {
+  method.i <- plt.grid[i,]$method.i
+  year.since.i <- plt.grid[i,]$year.since
+  pre.length.i <- plt.grid[i,]$pre.length
+  buffer.i <- plt.grid[i,]$buffer.i
+  
+  ratio.i <- SSA.dir.indir.5km %>% 
+    filter(y.var %in% c("direct.forest.loss","indirect.forest.loss"),
+           year.since == year.since.i, pre.length == pre.length.i, 
+           method == method.i, buffer.size == buffer.i) %>%
+    mutate(ci95.cert.dir = ifelse(uci > 0 & lci > 0, "yes", "no"),
+           estimate = ifelse(estimate > 0, estimate, NA)) %>%
+    mutate(ci95.cert.dir = ifelse(any(ci95.cert.dir == "no"), "no", "yes")) %>%
+    pivot_wider(id_cols = c("buffer.size", "pre.length", "method",
+                            "year.since", "cluster.n", "ci95.cert.dir"), 
+                values_from = "estimate", names_from = "y.var") %>%
+    mutate(ratio.mean = indirect.forest.loss/direct.forest.loss,
+           ratio.ci = ifelse(ci95.cert.dir == "yes", ratio.mean, NA)) 
+  
+  SSA.ratio.store <- rbind(SSA.ratio.store, ratio.i)
+}
+
+
+## get national data in
 load("Outputs/DiD.tables/all.direct.indirect.DiD.5km.Jul25.RData")
 dir.indir.5km <- did.all %>%
   mutate(pre.length = ifelse(is.na(pre.length), "csa", pre.length)) %>% 
@@ -265,22 +303,24 @@ country.ratio.area <- left_join(ratio.store, country.mining.total.loss.df, by = 
          ratio.mean = ifelse(is.na(ratio.mean), 0, ratio.mean))
 
 # xy plotting
-xy.plt.mean <- ggplot(filter(country.ratio.area, missing.mean == "no"), 
+xy.plt.mean <- ggplot(filter(country.ratio.area, missing.ci == "no"), 
                    aes(total.mined.area, ratio.mean,
-                       size = total.mined.area, shape = missing.ci,
+                       size = total.mined.area,
                        colour = ratio.mean)) +
   geom_point(data = filter(country.ratio.area, missing.ci == "yes"), 
              colour = "grey50", fill = "grey50") +
   geom_point(fill = NA) +
   scale_color_gradient(low = "#ffeda0", high = "#800026") +
-  scale_shape_manual(values = c(19, 21)) +
   #geom_label(aes(label = iso3)) +
-  ggrepel::geom_text_repel(aes(label = iso3), size = 3, colour = "black" ) +
+  ggrepel::geom_text_repel(data = filter(country.ratio.area, ratio.mean >0), 
+                           aes(label = iso3), size = 3, colour = "black" ) +
+  # add SSA wide value
+  geom_hline(data = filter(SSA.ratio.store, pre.length == "csa"), 
+             aes(yintercept = ratio.mean, colour = ratio.mean), linetype = "dashed") +
   #scale_x_log10() +
   #scale_y_log10() +
   xlab("Mining forest loss (ha)") +
   ylab("Indirect deforestation per ha \n of direct deforestation") +
-  #coord_cartesian(ylim = c(-15, 260)) +
   theme_minimal() +
   theme(legend.position = "none")
 
@@ -313,7 +353,7 @@ map.xy.arr <- ggarrange(map.ratio, xy.plt.mean,
                         labels = c("a", "b"), common.legend = TRUE,
                         legend = "bottom", widths = c(1, 1.4))
 
-ggsave(path = "Outputs/Figures/DiD", filename = "map.mean.ratio.xy.png",
+ggsave(path = "Outputs/Figures/DiD", filename = "map.mean.ratio.plus.SSA.xy.png",
        map.xy.arr, bg = "white",
        device = "png", width = 7, height = 4, units = "in") 
 
