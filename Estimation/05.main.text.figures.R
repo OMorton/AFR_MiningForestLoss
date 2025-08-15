@@ -211,7 +211,7 @@ ggsave(path = "Outputs/Figures/DiD", filename = "CSA.DiD.Fig2.10yr.png",
 ## Figure 3 direct and indirect effects ----------------------------------------
 
 ## get SSA-wide data
-load("Outputs/DiD.tables/SSA.direct.indirect.DiD.5km.Jul25.RData")
+load("Outputs/DiD.tables/SSA.direct.indirect.AREA.DiD.5km.Aug25.RData")
 
 SSA.dir.indir.5km <- SSA.did.all %>%
   mutate(pre.length = ifelse(is.na(pre.length), "csa", pre.length))
@@ -246,10 +246,11 @@ for (i in 1:nrow(plt.grid)) {
   
   SSA.ratio.store <- rbind(SSA.ratio.store, ratio.i)
 }
+write.csv(SSA.ratio.store, "Outputs/DiD.tables/SSA.ratios.all.AREA.FINAL.csv")
 
 
 ## get national data in
-load("Outputs/DiD.tables/all.direct.indirect.DiD.5km.Jul25.RData")
+load("Outputs/DiD.tables/all.direct.indirect.AREA.DiD.5km.Aug25.RData")
 dir.indir.5km <- did.all %>%
   mutate(pre.length = ifelse(is.na(pre.length), "csa", pre.length)) %>% 
   filter(cluster.n > 29)
@@ -287,7 +288,7 @@ for (i in 1:nrow(plt.grid)) {
   ratio.store <- rbind(ratio.store, ratio.i)
 }
 
-write.csv(ratio.store, "Outputs/DiD.tables/national.ratios.all.FINAL.csv")
+write.csv(ratio.store, "Outputs/DiD.tables/national.ratios.all.AREA.FINAL.csv")
 
 
 
@@ -353,7 +354,7 @@ map.xy.arr <- ggarrange(map.ratio, xy.plt.mean,
                         labels = c("a", "b"), common.legend = TRUE,
                         legend = "bottom", widths = c(1, 1.4))
 
-ggsave(path = "Outputs/Figures/DiD", filename = "map.mean.ratio.plus.SSA.xy.png",
+ggsave(path = "Outputs/Figures/DiD", filename = "map.mean.AREA.ratio.plus.SSA.xy.png",
        map.xy.arr, bg = "white",
        device = "png", width = 7, height = 4, units = "in") 
 
@@ -413,7 +414,8 @@ for (i in 1:length(top.comm$material)) {
     geom_sf(data = afr.map, colour = "grey20", fill = "white") +
     geom_sf(data = afr.inc, fill = "grey85") +
     geom_sf(data = nat.comm.i, aes(geometry = geometry), fill = col.i) +
-    annotate("text", x = -5, y = -20, label = paste0("n = ", comm.n.i$n), size = 4.5) +
+    #annotate("text", x = -5, y = -20, label = paste0("n = ", comm.n.i$n), size = 4.5) +
+    annotate("text", x = -5, y = -20, label = paste0("n = ", comm.n.i$n), size = 3.5) +
     theme_void()
   
   comm.map.ls[[paste0(comm.i , ".map")]] <- comm.map.i 
@@ -535,6 +537,173 @@ comm.map.csa.arr2 <- comm.map.csa.arr +
 ggsave(path = "Outputs/Figures/DiD", filename = "CSA.commodities.map.png",
        comm.map.csa.arr2, bg = "white",
        device = "png", width = 35, height = 40, units = "cm")  
+
+## No x and y titles
+comm.map.csa.arr <- ggarrange(empty,
+                              ggarrange(comm.plt.ls$`temporal.Cobalt.1km.Callaway & Sant'Anna 2021`+
+                                          xlab(""),
+                                        comm.plt.ls$`temporal.Cobalt.5km.Callaway & Sant'Anna 2021` +
+                                          xlab("") + ylab(""),
+                                        comm.plt.ls$`temporal.Cobalt.10km.Callaway & Sant'Anna 2021` +
+                                          xlab("") + ylab(""),
+                                        comm.map.ls$Cobalt.map,
+                                        comm.plt.ls$`temporal.Copper.1km.Callaway & Sant'Anna 2021`+
+                                          xlab(""),
+                                        comm.plt.ls$`temporal.Copper.5km.Callaway & Sant'Anna 2021` +
+                                          xlab("") + ylab(""),
+                                        comm.plt.ls$`temporal.Copper.10km.Callaway & Sant'Anna 2021` +
+                                          xlab("") + ylab(""),
+                                        comm.map.ls$Copper.map,
+                                        comm.plt.ls$`temporal.Manganese.1km.Callaway & Sant'Anna 2021`+
+                                          xlab(""),
+                                        comm.plt.ls$`temporal.Manganese.5km.Callaway & Sant'Anna 2021` +
+                                          xlab("") + ylab(""),
+                                        comm.plt.ls$`temporal.Manganese.10km.Callaway & Sant'Anna 2021` +
+                                          xlab("") + ylab(""),
+                                        comm.map.ls$Manganese.map,
+                                        comm.plt.ls$`temporal.Diamonds.1km.Callaway & Sant'Anna 2021`+
+                                          xlab(""),
+                                        comm.plt.ls$`temporal.Diamonds.5km.Callaway & Sant'Anna 2021` +
+                                          xlab("") + ylab(""),
+                                        comm.plt.ls$`temporal.Diamonds.10km.Callaway & Sant'Anna 2021` +
+                                          xlab("") + ylab(""),
+                                        comm.map.ls$Diamonds.map,
+                                        comm.plt.ls$`temporal.Gold.1km.Callaway & Sant'Anna 2021`+
+                                          xlab(""),
+                                        comm.plt.ls$`temporal.Gold.5km.Callaway & Sant'Anna 2021` +
+                                          xlab("") + ylab(""),
+                                        comm.plt.ls$`temporal.Gold.10km.Callaway & Sant'Anna 2021` +
+                                          xlab("") + ylab(""),
+                                        comm.map.ls$Gold.map,
+                                        comm.plt.ls$`temporal.Silver.1km.Callaway & Sant'Anna 2021`+
+                                          xlab(""),
+                                        comm.plt.ls$`temporal.Silver.5km.Callaway & Sant'Anna 2021` +
+                                          xlab("") + ylab(""),
+                                        comm.plt.ls$`temporal.Silver.10km.Callaway & Sant'Anna 2021` +
+                                          xlab("") + ylab(""),
+                                        comm.map.ls$Silver.map,
+                                        comm.plt.ls$`temporal.Iron.1km.Callaway & Sant'Anna 2021`,
+                                        comm.plt.ls$`temporal.Iron.5km.Callaway & Sant'Anna 2021` +
+                                          ylab(""),
+                                        comm.plt.ls$`temporal.Iron.10km.Callaway & Sant'Anna 2021` +
+                                          ylab(""),
+                                        comm.map.ls$Iron.map,
+                                        # comm.plt.ls$`temporal.Uranium.1km.Callaway & Sant'Anna 2021`,
+                                        # comm.plt.ls$`temporal.Uranium.5km.Callaway & Sant'Anna 2021`,
+                                        # comm.plt.ls$`temporal.Uranium.10km.Callaway & Sant'Anna 2021`,
+                                        # comm.map.ls$Uranium.map,
+                                        # comm.plt.ls$`temporal.Titanium.1km.Callaway & Sant'Anna 2021`,
+                                        # comm.plt.ls$`temporal.Titanium.5km.Callaway & Sant'Anna 2021`,
+                                        # comm.plt.ls$`temporal.Titanium.10km.Callaway & Sant'Anna 2021`,
+                                        # comm.map.ls$Titanium.map,
+                                        ncol =4, nrow = 7, widths = c(1,1,1,.5),
+                                        labels = c("a - Cobalt", "", "", "",
+                                                   "b - Copper", "", "", "",
+                                                   "c - Manganese", "", "", "",
+                                                   "d - Diamonds", "", "", "",
+                                                   "e - Gold", "", "", "",
+                                                   "f - Silver", "", "", "",
+                                                   "g - Iron", "", "", ""
+                                                   #"h - Uranium", "", "", ""
+                                                   #"h - Titanium", "", "", ""
+                                        ),
+                                        hjust = 0, vjust = 0),
+                              ncol = 1, heights = c(1, 40))
+
+comm.map.csa.arr2 <- comm.map.csa.arr +
+  annotation_custom(text_grob("0-1 km", face = "bold", size= 16), xmin = 0.6/3.5, xmax = 0.6/3.5, ymin = 0.97, ymax = 1.0) +
+  annotation_custom(text_grob("1-5 km", face = "bold", size= 16), xmin = 1.6/3.5, xmax = 1.6/3.5, ymin = 0.97, ymax = 1.0) +
+  annotation_custom(text_grob("5-10 km", face = "bold", size= 16), xmin = 2.6/3.5, xmax = 2.6/3.5, ymin = 0.97, ymax = 1.0)
+
+
+ggsave(path = "Outputs/Figures/DiD", filename = "CSA.commodities.map.NO.TITLES.png",
+       comm.map.csa.arr2, bg = "white",
+       device = "png", width = 35, height = 40, units = "cm")  
+
+## single large x and y titles
+comm.map.csa.arr <- ggarrange(empty,
+                              ggarrange(comm.plt.ls$`temporal.Cobalt.1km.Callaway & Sant'Anna 2021`+
+                                          xlab("") + ylab(""),
+                                        comm.plt.ls$`temporal.Cobalt.5km.Callaway & Sant'Anna 2021` +
+                                          xlab("") + ylab(""),
+                                        comm.plt.ls$`temporal.Cobalt.10km.Callaway & Sant'Anna 2021` +
+                                          xlab("") + ylab(""),
+                                        comm.map.ls$Cobalt.map,
+                                        comm.plt.ls$`temporal.Copper.1km.Callaway & Sant'Anna 2021`+
+                                          xlab("") + ylab(""),
+                                        comm.plt.ls$`temporal.Copper.5km.Callaway & Sant'Anna 2021` +
+                                          xlab("") + ylab(""),
+                                        comm.plt.ls$`temporal.Copper.10km.Callaway & Sant'Anna 2021` +
+                                          xlab("") + ylab(""),
+                                        comm.map.ls$Copper.map,
+                                        comm.plt.ls$`temporal.Manganese.1km.Callaway & Sant'Anna 2021`+
+                                          xlab("") + ylab(""),
+                                        comm.plt.ls$`temporal.Manganese.5km.Callaway & Sant'Anna 2021` +
+                                          xlab("") + ylab(""),
+                                        comm.plt.ls$`temporal.Manganese.10km.Callaway & Sant'Anna 2021` +
+                                          xlab("") + ylab(""),
+                                        comm.map.ls$Manganese.map,
+                                        comm.plt.ls$`temporal.Diamonds.1km.Callaway & Sant'Anna 2021`+
+                                          xlab("") + ylab(""),
+                                        comm.plt.ls$`temporal.Diamonds.5km.Callaway & Sant'Anna 2021` +
+                                          xlab("") + ylab(""),
+                                        comm.plt.ls$`temporal.Diamonds.10km.Callaway & Sant'Anna 2021` +
+                                          xlab("") + ylab(""),
+                                        comm.map.ls$Diamonds.map,
+                                        comm.plt.ls$`temporal.Gold.1km.Callaway & Sant'Anna 2021`+
+                                          xlab("") + ylab(""),
+                                        comm.plt.ls$`temporal.Gold.5km.Callaway & Sant'Anna 2021` +
+                                          xlab("") + ylab(""),
+                                        comm.plt.ls$`temporal.Gold.10km.Callaway & Sant'Anna 2021` +
+                                          xlab("") + ylab(""),
+                                        comm.map.ls$Gold.map,
+                                        comm.plt.ls$`temporal.Silver.1km.Callaway & Sant'Anna 2021`+
+                                          xlab("") + ylab(""),
+                                        comm.plt.ls$`temporal.Silver.5km.Callaway & Sant'Anna 2021` +
+                                          xlab("") + ylab(""),
+                                        comm.plt.ls$`temporal.Silver.10km.Callaway & Sant'Anna 2021` +
+                                          xlab("") + ylab(""),
+                                        comm.map.ls$Silver.map,
+                                        comm.plt.ls$`temporal.Iron.1km.Callaway & Sant'Anna 2021` +
+                                          xlab("") + ylab(""),
+                                        comm.plt.ls$`temporal.Iron.5km.Callaway & Sant'Anna 2021` +
+                                          xlab("") + ylab(""),
+                                        comm.plt.ls$`temporal.Iron.10km.Callaway & Sant'Anna 2021` +
+                                          xlab("") + ylab(""),
+                                        comm.map.ls$Iron.map,
+                                        # comm.plt.ls$`temporal.Uranium.1km.Callaway & Sant'Anna 2021`,
+                                        # comm.plt.ls$`temporal.Uranium.5km.Callaway & Sant'Anna 2021`,
+                                        # comm.plt.ls$`temporal.Uranium.10km.Callaway & Sant'Anna 2021`,
+                                        # comm.map.ls$Uranium.map,
+                                        # comm.plt.ls$`temporal.Titanium.1km.Callaway & Sant'Anna 2021`,
+                                        # comm.plt.ls$`temporal.Titanium.5km.Callaway & Sant'Anna 2021`,
+                                        # comm.plt.ls$`temporal.Titanium.10km.Callaway & Sant'Anna 2021`,
+                                        # comm.map.ls$Titanium.map,
+                                        ncol =4, nrow = 7, widths = c(1,1,1,.5),
+                                        labels = c("a - Cobalt", "", "", "",
+                                                   "b - Copper", "", "", "",
+                                                   "c - Manganese", "", "", "",
+                                                   "d - Diamonds", "", "", "",
+                                                   "e - Gold", "", "", "",
+                                                   "f - Silver", "", "", "",
+                                                   "g - Iron", "", "", ""
+                                                   #"h - Uranium", "", "", ""
+                                                   #"h - Titanium", "", "", ""
+                                        ),
+                                        hjust = 0, label.x = 0.1, vjust = 0),
+                              ncol = 1, heights = c(1, 40))
+
+comm.map.csa.arr2 <- comm.map.csa.arr +
+  annotation_custom(text_grob("0-1 km", face = "bold", size= 16), xmin = 0.6/3.5, xmax = 0.6/3.5, ymin = 0.97, ymax = 1.0) +
+  annotation_custom(text_grob("1-5 km", face = "bold", size= 16), xmin = 1.6/3.5, xmax = 1.6/3.5, ymin = 0.97, ymax = 1.0) +
+  annotation_custom(text_grob("5-10 km", face = "bold", size= 16), xmin = 2.6/3.5, xmax = 2.6/3.5, ymin = 0.97, ymax = 1.0)+
+  annotation_custom(text_grob("Additional deforestation (pp)", size= 16, rot = 90), xmin = 0.01, xmax = 0.01, ymin = 0.5, ymax = .5)+
+  annotation_custom(text_grob("Years since mining", size= 16), xmin = 1.6/3.5, xmax = 1.6/3.5, ymin = 0.01, ymax = .01)
+
+
+ggsave(path = "Outputs/Figures/DiD", filename = "CSA.commodities.map.LARGE.TITLES.png",
+       comm.map.csa.arr2, bg = "white",
+       device = "png", width = 35*0.75, height = 40*0.75, units = "cm") 
 
 # ggsave(path = "Outputs/Figures/DiD", filename = "CSA.commodities.map.FIXEDSCALE.png",
 #        comm.map.csa.arr2, bg = "white",
