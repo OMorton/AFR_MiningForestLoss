@@ -137,7 +137,7 @@ file.dir <- data.frame(file = list.files(path = all.path, pattern = "5km.master"
 
 country.ls <- unique(file.dir$country)
 did.all <- list()
-j <- 17
+j <- 6
 t <- -10
 for (t in c(-5, -10)) {
   for (j in 1:length(country.ls)) {
@@ -150,12 +150,12 @@ for (t in c(-5, -10)) {
     load(paste0(all.path, nat.buff$file))
     mine.all.forest.loss.df <- mine.buffer.forest.loss.df %>%
       select(CLUSTER_ID, first.mine.year, buffer.size, loss.year, 
-             forest.cells.2000, cumulative.forest.loss, cumulative.forest.loss.prop)
+             forest.area.2000, cumulative.forest.loss.area)
     
     # get files for mining only forest loss
     load(paste0(min.only.path, nat.buff$mining.only.file))
     mine.direct.forest.loss.df <- mine.buffer.forest.loss.df %>%
-      rename("direct.forest.loss" = "cumulative.forest.loss") %>%
+      rename("direct.forest.loss" = "cumulative.forest.loss.area") %>%
       mutate(buffer.size = "5km Master") %>%
       select(CLUSTER_ID, first.mine.year, buffer.size, loss.year, 
              direct.forest.loss)
@@ -180,11 +180,11 @@ for (t in c(-5, -10)) {
                                 by = c("CLUSTER_ID", "first.mine.year", "buffer.size", "loss.year")) %>%
       # drop years after 2020 as beyond Masosele et al.
       filter(!is.na(direct.forest.loss)) %>%
-      mutate(direct.forest.loss = ifelse(direct.forest.loss>cumulative.forest.loss,
-                                         cumulative.forest.loss, direct.forest.loss),
-             indirect.forest.loss = cumulative.forest.loss - direct.forest.loss,
-             indirect.perc = indirect.forest.loss/forest.cells.2000 *100,
-             direct.perc = direct.forest.loss/forest.cells.2000 *100)
+      mutate(direct.forest.loss = ifelse(direct.forest.loss>cumulative.forest.loss.area,
+                                         cumulative.forest.loss.area, direct.forest.loss),
+             indirect.forest.loss = cumulative.forest.loss.area - direct.forest.loss,
+             indirect.perc = indirect.forest.loss/forest.area.2000 *100,
+             direct.perc = direct.forest.loss/forest.area.2000 *100)
     
     load(paste0(cov.path, nat.buff$country, ".50p.forest.final.COVARIATES.RData"))
     covs.i <- 
@@ -192,16 +192,22 @@ for (t in c(-5, -10)) {
     
     # check for any zero cover
     zeroes <- "No"
-    if (any(dir.indir.loss$forest.cells.2000 ==0)) {
+    if (any(dir.indir.loss$forest.area.2000 ==0)) {
       cat("Warning - 0 forest cover in 2000 detected for", nat.buff$country, "\n")
       dir.indir.loss <- 
-        dir.indir.loss %>% filter(forest.cells.2000>0)
+        dir.indir.loss %>% filter(forest.area.2000>0)
       zeroes <- "Yes"
     }
     # prep for DiD
-    i.did.dat <- did.prep(dir.indir.loss,
-                          lead.time = -23, post.time = 23,
-                          type = "loss", covariates = covs.i)
+    i.did.dat <- dir.indir.loss %>% 
+      #mining data only runs to 2020
+      filter(loss.year <= 2020) %>%
+      mutate(year = loss.year - 2000,
+             treatment = ifelse(year >= first.mine.year, TRUE, FALSE),
+             treatment.n = ifelse(year >= first.mine.year, 1, 0),
+             rel.year.first = year - first.mine.year) %>%
+      filter(rel.year.first >= -23 & rel.year.first <= 23) %>% 
+      left_join(covs.i, by = "CLUSTER_ID")
     
     # try statement as some countries cannot isolate a direct effect of mining as the 
     # response ends up constant
@@ -255,7 +261,7 @@ for (t in c(-5, -10)) {
   }
 }
 
-save(did.all, file = "Outputs/DiD.tables/all.direct.indirect.DiD.5km.Jul25.RData")
+save(did.all, file = "Outputs/DiD.tables/all.direct.indirect.AREA.DiD.5km.Aug25.RData")
 
 ## SSA-Wide: Direct and indirect 0-5 km buffer ---------------------------------
 
@@ -302,11 +308,11 @@ for (t in c(-5, -10)) {
     # get files for all forest loss
     ssa.all <- ssa.all.raw %>%
       select(CLUSTER_ID, first.mine.year, buffer.size, loss.year, 
-             forest.cells.2000, cumulative.forest.loss, cumulative.forest.loss.prop, country)
+             forest.area.2000, cumulative.forest.loss.area, country)
     
     # get files for mining only forest loss
     ssa.dir <- ssa.dir.raw  %>%
-      rename("direct.forest.loss" = "cumulative.forest.loss") %>%
+      rename("direct.forest.loss" = "cumulative.forest.loss.area") %>%
       mutate(buffer.size = "5km Master") %>%
       select(CLUSTER_ID, first.mine.year, buffer.size, loss.year, 
              direct.forest.loss, country)
@@ -329,11 +335,11 @@ for (t in c(-5, -10)) {
     
     dir.indir.loss <- left_join(ssa.all, ssa.dir,
                                 by = c("CLUSTER_ID", "first.mine.year", "buffer.size", "loss.year", "country")) %>%
-      mutate(direct.forest.loss = ifelse(direct.forest.loss>cumulative.forest.loss,
-                                         cumulative.forest.loss, direct.forest.loss),
-             indirect.forest.loss = cumulative.forest.loss - direct.forest.loss,
-             indirect.perc = indirect.forest.loss/forest.cells.2000 *100,
-             direct.perc = direct.forest.loss/forest.cells.2000 *100)
+      mutate(direct.forest.loss = ifelse(direct.forest.loss>cumulative.forest.loss.area,
+                                         cumulative.forest.loss.area, direct.forest.loss),
+             indirect.forest.loss = cumulative.forest.loss.area - direct.forest.loss,
+             indirect.perc = indirect.forest.loss/forest.area.2000 *100,
+             direct.perc = direct.forest.loss/forest.area.2000 *100)
     
     # load(paste0(cov.path, nat.buff$country, ".50p.forest.final.COVARIATES.RData"))
     # covs.i <- 
@@ -348,9 +354,14 @@ for (t in c(-5, -10)) {
     #   zeroes <- "Yes"
     # }
     # prep for DiD
-    i.did.dat <- did.prep(dir.indir.loss,
-                          lead.time = -23, post.time = 23,
-                          type = "loss", covariates = NULL) %>%
+    i.did.dat <- dir.indir.loss %>% 
+      #mining data only runs to 2020
+      filter(loss.year <= 2020) %>%
+      mutate(year = loss.year - 2000,
+             treatment = ifelse(year >= first.mine.year, TRUE, FALSE),
+             treatment.n = ifelse(year >= first.mine.year, 1, 0),
+             rel.year.first = year - first.mine.year) %>%
+      filter(rel.year.first >= -23 & rel.year.first <= 23) %>% 
       group_by(country, CLUSTER_ID) %>%
       mutate(cluster.country.id = cur_group_id()) %>% ungroup()
     
@@ -403,5 +414,5 @@ for (t in c(-5, -10)) {
   }
 
 
-save(SSA.did.all, file = "Outputs/DiD.tables/SSA.direct.indirect.DiD.5km.Jul25.RData")
+save(SSA.did.all, file = "Outputs/DiD.tables/SSA.direct.indirect.AREA.DiD.5km.Aug25.RData")
 
