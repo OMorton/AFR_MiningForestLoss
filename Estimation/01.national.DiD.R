@@ -26,86 +26,110 @@ did.covar.ls <- list()
 j <- 10
 i <- "1km"
 t <--10
-
+f <- 1
 ## Estimate DiD ----------------------------------------------------------------
-
-for (t in c(-5, -10)) {
-  for (j in 1:length(country.ls)) {
-    cat(j, "out of", length(country.ls), "\n")
-    for (i in c("1km", "2.5km", "5km", "10km", "20km", "5km.master")) {
-      
-      # get ixj combo
-      country.j <- country.ls[j]
-      nat.buff <- file.dir %>% filter(country == country.j, buffer == i)
-      # get files
-      load(paste0(dir.path, nat.buff$file))
-      load(paste0(cov.path, nat.buff$country, ".50p.forest.final.COVARIATES.RData"))
-      covs.i <- 
-        select(mine.cluster.points.df, -first.mine.year, -buffer.forest.prop)
-    
-      # check for any zero cover
-      zeroes <- "No"
-      if (any(mine.buffer.forest.loss.df$forest.cells.2000 ==0)) {
-        cat("Warning - 0 forest cover in 2000 detected for", nat.buff$country, "\n")
-        mine.buffer.forest.loss.df <- 
-          mine.buffer.forest.loss.df %>% filter(forest.cells.2000>0)
-        zeroes <- "Yes"
-      }
-      # prep for DiD
-      i.did.dat <- did.prep(mine.buffer.forest.loss.df,
-                            lead.time = -23, post.time = 23,
-                              type = "loss", covariates = covs.i)
-      
-      i.did.fit <- fit.dynamic.DiD(i.did.dat,
-                                   yname = "cumulative.forest.loss.perc",
-                                   xformula = NULL, 
-                                   method = c("csa", "gardner"), GAR.pre.period = t)
-      
-      # only run the csa covar once per loop (t is irrelevant)
-      if(t == -10) {
-      i.did.dat <- scale.tidy(i.did.dat)
-      
-      i.did.covar.fit <- data.frame(year.since = NA, estimate = NA, lci = NA, uci  = NA,
-                          p.value  = NA, method = NA, y.var = NA)
-      try(i.did.covar.fit <- fit.dynamic.DiD(i.did.dat,
-                      yname = "cumulative.forest.loss.perc",
-                      xformula = ~ slope.z + elevation.z + pop.density.z + travel.time.z, 
-                      method = c("csa"), GAR.pre.period = t),
-          silent = TRUE)
-      } else {
-        i.did.dat <- scale.tidy(i.did.dat)
+# loop accross pre-treatment periods, the Gardner method can be sensitive to this.
+for (f in c(1:4)) {
+  for (t in c(-5, -10)) {
+    for (j in 1:length(country.ls)) {
+      cat(j, "out of", length(country.ls), "\n")
+      for (i in c("1km", "5km", "10km", "20km")) {
         
-        i.did.covar.fit <- data.frame(year.since = NA, estimate = NA, lci = NA, uci  = NA,
-                                      p.value  = NA, method = NA, y.var = NA)
-        try(i.did.covar.fit <- fit.dynamic.DiD(i.did.dat,
-                                               yname = "cumulative.forest.loss.perc",
-                                               xformula = ~ slope.z + elevation.z + pop.density.z + travel.time.z, 
-                                               method = c("gardner"), GAR.pre.period = t),
-            silent = TRUE)
+        # get ixj combo
+        country.j <- country.ls[j]
+        nat.buff <- file.dir %>% filter(country == country.j, buffer == i)
+        # get files
+        load(paste0(dir.path, nat.buff$file))
+        load(paste0(cov.path, nat.buff$country, ".50p.forest.final.COVARIATES.RData"))
+        covs.i <- 
+          select(mine.cluster.points.df, -first.mine.year, -buffer.forest.prop)
+        
+        # check for any zero cover
+        zeroes <- "No"
+        if (any(mine.buffer.forest.loss.df$forest.cells.2000 ==0)) {
+          cat("Warning - 0 forest cover in 2000 detected for", nat.buff$country, "\n")
+          mine.buffer.forest.loss.df <- 
+            mine.buffer.forest.loss.df %>% filter(forest.cells.2000>0)
+          zeroes <- "Yes"
+        }
+        # prep for DiD
+        mine.buffer.forest.loss.df2 <- 
+          mine.buffer.forest.loss.df %>% left_join(covs.i)
+        
+        if ( f == 1) {
+          # do nothing will use first.mine.year
+        }
+        if ( f == 2) {
+          mine.buffer.forest.loss.df2 <- mine.buffer.forest.loss.df2 %>% rename("NOT.USED" = "first.mine.year",
+                                                                                "first.mine.year" = "year.10p")
+        }
+        if ( f == 3) {
+          mine.buffer.forest.loss.df2 <- mine.buffer.forest.loss.df2 %>% rename("NOT.USED" = "first.mine.year",
+                                                                                "first.mine.year" = "year.20p")
+        }
+        if ( f == 4) {
+          mine.buffer.forest.loss.df2 <- mine.buffer.forest.loss.df2 %>% rename("NOT.USED" = "first.mine.year",
+                                                                                "first.mine.year" = "year.25p")
+        }
+        
+        i.did.dat <- did.prep(mine.buffer.forest.loss.df2,
+                              lead.time = -23, post.time = 23,
+                              type = "loss", covariates = NULL)
+        
+        i.did.fit <- fit.dynamic.DiD(i.did.dat,
+                                     yname = "cumulative.forest.loss.perc",
+                                     xformula = NULL, 
+                                     method = c("csa", "gardner"), GAR.pre.period = t)
+        
+        # only run the csa covar once per loop (t is irrelevant)
+        if(t == -10) {
+          i.did.dat <- scale.tidy(i.did.dat)
+          
+          i.did.covar.fit <- data.frame(year.since = NA, estimate = NA, lci = NA, uci  = NA,
+                                        p.value  = NA, method = NA, y.var = NA)
+          try(i.did.covar.fit <- fit.dynamic.DiD(i.did.dat,
+                                                 yname = "cumulative.forest.loss.perc",
+                                                 xformula = ~ slope.z + elevation.z + pop.density.z + travel.time.z, 
+                                                 method = c("csa"), GAR.pre.period = t),
+              silent = TRUE)
+        } else {
+          i.did.dat <- scale.tidy(i.did.dat)
+          
+          i.did.covar.fit <- data.frame(year.since = NA, estimate = NA, lci = NA, uci  = NA,
+                                        p.value  = NA, method = NA, y.var = NA)
+          try(i.did.covar.fit <- fit.dynamic.DiD(i.did.dat,
+                                                 yname = "cumulative.forest.loss.perc",
+                                                 xformula = ~ slope.z + elevation.z + pop.density.z + travel.time.z, 
+                                                 method = c("gardner"), GAR.pre.period = t),
+              silent = TRUE)
+        }
+        i.did.fit$buffer.size <- i
+        i.did.fit$country <- country.j
+        i.did.fit$cluster.n <- length(mine.cluster.points.df$CLUSTER_ID)
+        i.did.fit$unique.trt.yrs <- length(unique(mine.cluster.points.df$first.mine.year))
+        i.did.fit$zeroes <- zeroes
+        i.did.fit$pre.period <- t
+        i.did.fit$mine.yr.method <- f
+        if (!is.null(i.did.covar.fit)) {
+          i.did.covar.fit$buffer.size <- i
+          i.did.covar.fit$country <- country.j
+          i.did.covar.fit$cluster.n <- length(mine.cluster.points.df$CLUSTER_ID)
+          i.did.covar.fit$unique.trt.yrs <- length(unique(mine.cluster.points.df$first.mine.year))
+          i.did.covar.fit$zeroes <- zeroes
+          i.did.covar.fit$pre.period <- t
+          i.did.covar.fit$mine.yr.method <- f
+          
+        }
+        did.ls[[paste0(country.j, ".", i, ".pre", t)]] <- i.did.fit 
+        did.covar.ls[[paste0(country.j, ".", i, ".pre", t)]] <- i.did.covar.fit 
+        
       }
-      i.did.fit$buffer.size <- i
-      i.did.fit$country <- country.j
-      i.did.fit$cluster.n <- length(mine.cluster.points.df$CLUSTER_ID)
-      i.did.fit$unique.trt.yrs <- length(unique(mine.cluster.points.df$first.mine.year))
-      i.did.fit$zeroes <- zeroes
-      i.did.fit$pre.period <- t
-      if (!is.null(i.did.covar.fit)) {
-        i.did.covar.fit$buffer.size <- i
-        i.did.covar.fit$country <- country.j
-        i.did.covar.fit$cluster.n <- length(mine.cluster.points.df$CLUSTER_ID)
-        i.did.covar.fit$unique.trt.yrs <- length(unique(mine.cluster.points.df$first.mine.year))
-        i.did.covar.fit$zeroes <- zeroes
-        i.did.covar.fit$pre.period <- t
-      }
-      did.ls[[paste0(country.j, ".", i, ".pre", t)]] <- i.did.fit 
-      did.covar.ls[[paste0(country.j, ".", i, ".pre", t)]] <- i.did.covar.fit 
-      
     }
   }
 }
 
-save(did.ls, file = "Outputs/DiD.tables/all.DiD.all.t.Jul25.RData")
-save(did.covar.ls, file = "Outputs/DiD.tables/all.covars.DiD.all.t.Jul25.RData")
+save(did.ls, file = "Outputs/DiD.tables/all.DiD.all.t.Jul25.varying.firstyear.RData")
+save(did.covar.ls, file = "Outputs/DiD.tables/all.covars.DiD.all.t.Jul25.varying.firstyear.RData")
 
 ## Per country plot checking ---------------------------------------------------------------
 load("Outputs/DiD.tables/all.not20km.DiD.RData")
