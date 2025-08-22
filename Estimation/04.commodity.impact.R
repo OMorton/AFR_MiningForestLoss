@@ -16,8 +16,11 @@ file.dir <- file.dir %>% mutate(country = sub(".forest.*", "", file),
                                 buffer = sub(".buffer.forest.loss.df.RData", "", file),
                                 buffer = sub(".forest.mines.", "", buffer),
                                 buffer = str_remove(buffer, country))
-cov.dir <- data.frame(file = list.files(path = cov.path, full.names = TRUE))
 
+## Get all covs
+cov.dir <- data.frame(file = list.files(path = cov.path, full.names = TRUE))
+covs.all <- read.covs.list(cov.dir) %>%
+  mutate(country = ifelse(country =="Côte d'Ivoire", "Côte d_Ivoire", country))
 
 file.1km <- file.dir %>% filter(buffer == "1km")
 file.5km <- file.dir %>% filter(buffer == "5km")
@@ -63,7 +66,9 @@ top.comm <- comm.df %>% group_by(material) %>% tally() %>%
 comm.ls <- top.comm$material
 buff.ls <- c(1, 5, 10, 20)
 comm.did.out <- data.frame()
-
+i <- 1
+t <--5
+c <- 1
 ## NOTE small group n prevent inclusion of a country varying effect here.
 for (t in c(-5, -10)) {
   for (i in 1:4) {
@@ -72,7 +77,12 @@ for (t in c(-5, -10)) {
       buff.i <- buff.ls[[i]]
       comm.c <- comm.ls[[c]]
       
-      dat.i.c <- filter(ssa.df, buffer.size == buff.i)
+      dat.i.c <- filter(ssa.df, buffer.size == buff.i) %>%
+        select(-first.mine.year, -buffer.forest.prop) %>% 
+        left_join(covs.all) %>% select(-first.mine.year) %>%
+        # set first year as the 10p trigger
+        rename("first.mine.year" = "year.10p")
+      
       dat.i.c <- did.prep(dat.i.c, lead.time = -23, post.time = 23,
                           type = "loss", covariates = NULL) %>%
         left_join(comm.df, by = c("CLUSTER_ID", "country"),
@@ -121,7 +131,7 @@ for (t in c(-5, -10)) {
   }
 }
 
-save(comm.did.out, file = "Outputs/DiD.tables/SSA.ALL.commodities.tidy.Jul25.RData")
+save(comm.did.out, file = "Outputs/DiD.tables/SSA.ALL.commodities.tidy.Aug25.10p.RData")
 
 # Primary commodities likely mined per site ------------------------------------
 comm.path <- "X:/morton_research/User/bi1om/Research/Mining/AfricaWideMining_ForestLoss/Analysis/Data/NationalMining/country.mining.commodity.type/"
@@ -158,7 +168,12 @@ for (t in c(-5, -10)) {
       buff.i <- buff.ls[[i]]
       comm.c <- comm.ls[[c]]
       
-      dat.i.c <- filter(ssa.df, buffer.size == buff.i)
+      dat.i.c <- filter(ssa.df, buffer.size == buff.i) %>%
+        select(-first.mine.year, -buffer.forest.prop) %>% 
+        left_join(covs.all) %>% select(-first.mine.year) %>%
+        # set first year as the 10p trigger
+        rename("first.mine.year" = "year.10p")
+      
       dat.i.c <- did.prep(dat.i.c, lead.time = -23, post.time = 23,
                           type = "loss", covariates = NULL) %>%
         left_join(comm.df, by = c("CLUSTER_ID", "country"),
@@ -207,4 +222,4 @@ for (t in c(-5, -10)) {
   }
 }
 
-save(comm.did.out, file = "Outputs/DiD.tables/SSA.PRIMARY.commodities.tidy.Jul25.RData")
+save(comm.did.out, file = "Outputs/DiD.tables/SSA.PRIMARY.commodities.tidy.Aug25.10p.RData")
