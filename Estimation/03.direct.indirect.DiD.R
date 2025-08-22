@@ -65,10 +65,13 @@ for (t in c(-5, -10)) {
         dir.indir.loss %>% filter(forest.cells.2000>0)
       zeroes <- "Yes"
     }
-    # prep for DiD
+    # prep for DiD - using first 10% as start of mining
+    dir.indir.loss <- dir.indir.loss %>% left_join(covs.i, by = "CLUSTER_ID") %>%
+      select(-first.mine.year) %>%
+      mutate(first.mine.year = year.10p)
     i.did.dat <- did.prep(dir.indir.loss,
                           lead.time = -23, post.time = 23,
-                          type = "loss", covariates = covs.i)
+                          type = "loss", covariates = NULL)
     
     # try statement as some countries cannot isolate a direct effect of mining as the 
     # response ends up constant
@@ -120,7 +123,7 @@ for (t in c(-5, -10)) {
   }
 }
 
-save(did.all, file = "Outputs/DiD.tables/all.direct.indirect.DiD.10km.Jul25.RData")
+save(did.all, file = "Outputs/DiD.tables/all.direct.indirect.DiD.10km.Aug25.10p.RData")
 
 
 ## Direct and indirect 0-5 km buffer -------------------------------------------
@@ -199,8 +202,11 @@ for (t in c(-5, -10)) {
       zeroes <- "Yes"
     }
     # prep for DiD
+    # prep for DiD - using first 10% as start of mining
     i.did.dat <- dir.indir.loss %>% 
-      #mining data only runs to 2020
+      left_join(covs.i, by = "CLUSTER_ID") %>%
+      select(-first.mine.year) %>%
+      mutate(first.mine.year = year.10p) %>%
       filter(loss.year <= 2020) %>%
       mutate(year = loss.year - 2000,
              treatment = ifelse(year >= first.mine.year, TRUE, FALSE),
@@ -261,7 +267,7 @@ for (t in c(-5, -10)) {
   }
 }
 
-save(did.all, file = "Outputs/DiD.tables/all.direct.indirect.AREA.DiD.5km.Aug25.RData")
+save(did.all, file = "Outputs/DiD.tables/all.direct.indirect.AREA.DiD.5km.Aug25.10p.RData")
 
 ## SSA-Wide: Direct and indirect 0-5 km buffer ---------------------------------
 
@@ -276,6 +282,10 @@ file.indir <- data.frame(file = list.files(path = all.path, pattern = "5km.maste
 file.dir <- data.frame(file = list.files(path = min.only.path, pattern = "5km.master")) %>% 
   mutate(country = sub(".forest.*", "", file),
          buffer = "5km.master")
+
+cov.dir <- data.frame(file = list.files(path = cov.path, full.names = TRUE))
+covs.all <- read.covs.list(cov.dir) %>%
+  mutate(country = ifelse(country =="Côte d'Ivoire", "Côte d_Ivoire", country))
 
 ssa.all.raw  <- data.frame()
 for (i in 1:29) {
@@ -354,7 +364,10 @@ for (t in c(-5, -10)) {
     #   zeroes <- "Yes"
     # }
     # prep for DiD
-    i.did.dat <- dir.indir.loss %>% 
+    i.did.dat <- dir.indir.loss %>%    
+      select(-first.mine.year) %>%
+      left_join(covs.all, by = c("country", "CLUSTER_ID")) %>%
+      mutate(first.mine.year = year.10p) %>%
       #mining data only runs to 2020
       filter(loss.year <= 2020) %>%
       mutate(year = loss.year - 2000,
@@ -394,25 +407,22 @@ for (t in c(-5, -10)) {
       i.did$buffer.size <- "5km.master"
       i.did$cluster.n <- length(unique(i.did.dat$cluster.country.id))
       i.did$unique.trt.yrs <- length(unique(i.did.dat$first.mine.year))
-      i.did$zeroes <- zeroes
       i.did$pre.length <- t
       SSA.did.all <- rbind(SSA.did.all, i.did)
     } else {
       i.did.csa$buffer.size <- "5km.master"
       i.did.csa$cluster.n <- length(unique(i.did.dat$cluster.country.id))
       i.did.csa$unique.trt.yrs <- length(unique(i.did.dat$first.mine.year))
-      i.did.csa$zeroes <- zeroes
       i.did.csa$pre.length <- NA
       
       i.did$buffer.size <- "5km.master"
       i.did$cluster.n <- length(unique(i.did.dat$cluster.country.id))
       i.did$unique.trt.yrs <- length(unique(i.did.dat$first.mine.year))
-      i.did$zeroes <- zeroes
       i.did$pre.length <- t
       SSA.did.all <- rbind(SSA.did.all, i.did, i.did.csa)  
     }
   }
 
 
-save(SSA.did.all, file = "Outputs/DiD.tables/SSA.direct.indirect.AREA.DiD.5km.Aug25.RData")
+save(SSA.did.all, file = "Outputs/DiD.tables/SSA.direct.indirect.AREA.DiD.5km.Aug25.10p.RData")
 
