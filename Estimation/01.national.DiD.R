@@ -120,8 +120,8 @@ for (f in c(1:4)) {
           i.did.covar.fit$mine.yr.method <- f
           
         }
-        did.ls[[paste0(country.j, ".", i, ".pre", t)]] <- i.did.fit 
-        did.covar.ls[[paste0(country.j, ".", i, ".pre", t)]] <- i.did.covar.fit 
+        did.ls[[paste0(country.j, ".", i, ".pre", t, ".FY", f)]] <- i.did.fit 
+        did.covar.ls[[paste0(country.j, ".", i, ".pre", t, ".FY", f)]] <- i.did.covar.fit 
         
       }
     }
