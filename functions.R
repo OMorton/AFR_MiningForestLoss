@@ -98,6 +98,7 @@ did.prep <- function(x, lead.time = -10, post.time = 15,
 scale.tidy <- function(x) {
   x %>% filter(!is.na(travel.time), !is.na(slope),
                !is.na(pop.density), !is.na(elevation)) %>%
+    ungroup() %>%
     mutate(travel.time.z =  (travel.time  - mean(travel.time))/
                  sd(travel.time),
                pop.density.z =  (pop.density  - mean(pop.density))/
