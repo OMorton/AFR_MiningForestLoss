@@ -36,20 +36,22 @@ ssa.ls <- list("1km" = ssa.1km,
                "20km" = ssa.20km,
                "5km.master" = ssa.5km.master)
 
-## 5km specific
+## 5km based
 covs.all <- read.covs.list(cov.dir) %>%
   mutate(country = ifelse(country =="Côte d'Ivoire", "Côte d_Ivoire", country))
-
-
+covs.all %>% select(first.mine.year, year.10p, year.20p) %>% cor()
 
 ## SSA wide --------------------------------------------------------------------
-
+forest.clusters <- read.csv("Outputs/third.forest.clusters.csv")
+forest.clusters <- forest.clusters %>% mutate(forest.id = paste0(country, ".", forest.clusters))
 ssa.names <- names(ssa.ls)
 ssa.did <- data.frame()
 ssa.did.covar <- data.frame()
 
 # f iterates across first mine period
 f <- 1
+t <- -10
+i <- 1
 # loop accross pre-treatment periods, the Gardner method can be sensitive to this.
 for (f in c(1:4)) {
   for (t in c(-5, -10)) {
@@ -76,11 +78,14 @@ for (f in c(1:4)) {
         buff.i <- buff.i %>% rename("NOT.USED" = "first.mine.year",
                                     "first.mine.year" = "year.25p")
       }
+      forest.clusters.j <- forest.clusters %>% filter(country == country.j)
       
       buff.i <- did.prep(buff.i,lead.time = -23, post.time = 23,
                          type = "loss", covariates = NULL) %>%
         group_by(country, CLUSTER_ID) %>%
-        mutate(cluster.country.id = cur_group_id())
+        mutate(cluster.country.id = cur_group_id(),
+               forest.id = paste0(country, ".", CLUSTER_ID)) %>%
+        filter(forest.id %in% forest.clusters$forest.id)
       
       
       
@@ -88,7 +93,7 @@ for (f in c(1:4)) {
       gardner.did <- did2s(data = filter(buff.i, rel.year.first >= t),
                            yname = "cumulative.forest.loss.perc", 
                            treatment = "treatment",
-                           first_stage =  ~ 0 | cluster.country.id + country^year, 
+                           first_stage =  ~ 0 | cluster.country.id + year + country, 
                            second_stage = ~ i(rel.year.first, ref = c(-1)),
                            cluster_var = "cluster.country.id", verbose = TRUE)
       
@@ -103,8 +108,8 @@ for (f in c(1:4)) {
       gardner.did.covar <- did2s(data = filter(covs.buff.i, rel.year.first >= t), 
                                  yname = "cumulative.forest.loss.perc", 
                                  treatment = "treatment",
-                                 first_stage =  ~ 0 + slope.z + elevation.z + pop.density.z + travel.time.z +
-                                   i(country, year) | cluster.country.id + year, 
+                                 first_stage =  ~ 0 + slope.z + elevation.z + 
+                                   pop.density.z + travel.time.z  | cluster.country.id + year + country, 
                                  second_stage = ~ i(rel.year.first, ref = c(-1)),
                                  cluster_var = "cluster.country.id", verbose = TRUE)
       
@@ -154,5 +159,5 @@ for (f in c(1:4)) {
   }
 }
 
-save(ssa.did, file = "Outputs/DiD.tables/SSA.tidy.Jul25.varying.firstyear.RData")
-save(ssa.did.covar, file = "Outputs/DiD.tables/SSA.tidy.covar.Jul25.varying.firstyear.RData")
+save(ssa.did, file = "Outputs/DiD.tables/SSA.tidy.Sept25.varying.firstyear.PlantationsRem.RData")
+save(ssa.did.covar, file = "Outputs/DiD.tables/SSA.tidy.covar.Sept25.varying.firstyear.PlantationsRem.RData")
