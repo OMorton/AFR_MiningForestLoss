@@ -15,13 +15,34 @@ file.dir <- data.frame(file = list.files(path = dir.path))
 file.dir <- file.dir %>% mutate(country = sub(".forest.*", "", file),
                                 buffer = sub(".buffer.forest.loss.df.RData", "", file),
                                 buffer = sub(".forest.mines.", "", buffer),
-                                buffer = str_remove(buffer, country)) %>%
-  ## remove low n
-  filter(!country %in% c("South Sudan", "Comoros", "Burundi", "Malawi", "Rwanda"))
+                                buffer = str_remove(buffer, country))
 
+
+## Filter out third forest clusters --------------------------------------------
 country.ls <- unique(file.dir$country)
-did.ls <- list()
-did.covar.ls <- list()
+
+third.forest.cutoff <- ((pi*(5000^2))/10000)*(1/3)
+forest.clusters <- data.frame()
+
+for (j in 1:length(country.ls)) {
+  country.j <- country.ls[j]
+  nat.buff <- file.dir %>% filter(country == country.j, buffer == "5km.master")
+  # get files
+  load(paste0(dir.path, nat.buff$file))
+    forest.clusters.j <- mine.buffer.forest.loss.df %>% 
+    filter(forest.area.2000 >= third.forest.cutoff) %>%
+    reframe(country = country.j, forest.clusters = unique(CLUSTER_ID))
+
+  forest.clusters <- rbind(forest.clusters, forest.clusters.j)  
+}
+
+write.csv(forest.clusters, "Outputs/third.forest.clusters.csv")
+sum.for <- forest.clusters %>% group_by(country) %>% tally()
+
+file.dir <- file.dir %>%
+  ## remove low n
+  filter(!country %in% c("South Sudan", "Comoros", "Burundi", 
+                         "Malawi", "Rwanda", "Swaziland"))
 
 j <- 10
 i <- "1km"
@@ -29,6 +50,12 @@ t <--10
 f <- 1
 ## Estimate DiD ----------------------------------------------------------------
 # loop accross pre-treatment periods, the Gardner method can be sensitive to this.
+country.ls <- unique(file.dir$country)
+did.ls <- list()
+did.covar.ls <- list()
+forest.clusters <- read.csv("Outputs/third.forest.clusters.csv")
+
+
 for (f in c(1:4)) {
   for (t in c(-5, -10)) {
     for (j in 1:length(country.ls)) {
@@ -49,12 +76,14 @@ for (f in c(1:4)) {
         if (any(mine.buffer.forest.loss.df$forest.cells.2000 ==0)) {
           cat("Warning - 0 forest cover in 2000 detected for", nat.buff$country, "\n")
           mine.buffer.forest.loss.df <- 
-            mine.buffer.forest.loss.df %>% filter(forest.cells.2000>0)
+            mine.buffer.forest.loss.df %>% filter(forest.cells.2000>0) 
           zeroes <- "Yes"
         }
         # prep for DiD
+        forest.clusters.j <- forest.clusters %>% filter(country == country.j)
         mine.buffer.forest.loss.df2 <- 
-          mine.buffer.forest.loss.df %>% left_join(covs.i)
+          mine.buffer.forest.loss.df %>% left_join(covs.i) %>%
+          filter(CLUSTER_ID %in% forest.clusters.j$forest.clusters)
         
         if ( f == 1) {
           # do nothing will use first.mine.year
@@ -128,8 +157,8 @@ for (f in c(1:4)) {
   }
 }
 
-save(did.ls, file = "Outputs/DiD.tables/all.DiD.all.t.Jul25.varying.firstyear.RData")
-save(did.covar.ls, file = "Outputs/DiD.tables/all.covars.DiD.all.t.Jul25.varying.firstyear.RData")
+save(did.ls, file = "Outputs/DiD.tables/all.DiD.all.t.Sept25.varying.firstyear.PlantationsRem.RData")
+save(did.covar.ls, file = "Outputs/DiD.tables/all.covars.DiD.all.t.Sept25.varying.firstyear.PlantationsRem.RData")
 
 ## Per country plot checking ---------------------------------------------------------------
 load("Outputs/DiD.tables/all.not20km.DiD.RData")
