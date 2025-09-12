@@ -76,7 +76,7 @@ did.prep <- function(x, lead.time = -10, post.time = 15,
              treatment = ifelse(year >= first.mine.year, TRUE, FALSE),
              treatment.n = ifelse(year >= first.mine.year, 1, 0),
              rel.year.first = year - first.mine.year,
-             cumulative.forest.loss.perc = cumulative.forest.loss.prop*100) %>%
+             cumulative.forest.loss.perc = cumulative.forest.loss.prop.area*100) %>%
       filter(rel.year.first >= lead.time & rel.year.first <= post.time)
     # left_join(mine.cluster.points.df, by = "CLUSTER")
   }else{
