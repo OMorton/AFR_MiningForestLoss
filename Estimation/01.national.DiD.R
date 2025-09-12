@@ -23,7 +23,7 @@ country.ls <- unique(file.dir$country)
 
 third.forest.cutoff <- ((pi*(5000^2))/10000)*(1/3)
 forest.clusters <- data.frame()
-
+j <- 1
 for (j in 1:length(country.ls)) {
   country.j <- country.ls[j]
   nat.buff <- file.dir %>% filter(country == country.j, buffer == "5km.master")
@@ -159,6 +159,46 @@ for (f in c(1:4)) {
 
 save(did.ls, file = "Outputs/DiD.tables/all.DiD.all.t.Sept25.varying.firstyear.PlantationsRem.RData")
 save(did.covar.ls, file = "Outputs/DiD.tables/all.covars.DiD.all.t.Sept25.varying.firstyear.PlantationsRem.RData")
+
+## Get true sample size --------------------------------------------------------
+
+dir.path <- "X:/morton_research/User/bi1om/Research/Mining/AfricaWideMining_ForestLoss/Analysis/Data/NationalMining/forest.loss.in.buffers/"
+file.dir <- data.frame(file = list.files(path = dir.path))
+file.dir <- file.dir %>% mutate(country = sub(".forest.*", "", file),
+                                buffer = sub(".buffer.forest.loss.df.RData", "", file),
+                                buffer = sub(".forest.mines.", "", buffer),
+                                buffer = str_remove(buffer, country))
+
+file.1km <- file.dir %>% filter(buffer == "1km")
+
+ssa.1km <- read.bind.list(file.1km)
+
+forest.clusters <- read.csv("Outputs/third.forest.clusters.csv")
+forest.clusters <- forest.clusters %>% mutate(forest.id = paste0(country, ".", forest.clusters))
+
+ssa.1km <- ssa.1km %>% mutate(forest.id = paste0(country, ".", CLUSTER_ID)) %>%
+  filter(forest.id %in% forest.clusters$forest.id)
+
+CSA.n <- ssa.1km %>% group_by(country) %>% filter(first.mine.year != 1 & first.mine.year != 20) %>%
+                     filter(forest.cells.2000 != 0) %>%
+  summarise(cluster.n = n_distinct(CLUSTER_ID),
+            method = "Callaway & Sant'Anna 2021")
+
+GAR.n <- ssa.1km %>% group_by(country) %>%
+  filter(first.mine.year != 1) %>%
+  filter(forest.cells.2000 != 0) %>%
+  filter(loss.year != 2020) %>%
+  summarise(cluster.n = n_distinct(CLUSTER_ID),
+            method = "Gardner 2022")
+
+Raw.n <- ssa.1km %>% group_by(country) %>%
+  summarise(cluster.n = n_distinct(CLUSTER_ID),
+            method = "Raw")
+
+sample.n.all <- rbind(CSA.n, GAR.n, Raw.n) %>%
+  group_by(method) %>% mutate(SSA.n = sum(cluster.n))
+
+write.csv(sample.n.all, "Outputs/sample.size.all.Sep25.csv")
 
 ## Per country plot checking ---------------------------------------------------------------
 load("Outputs/DiD.tables/all.not20km.DiD.RData")
