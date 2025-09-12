@@ -78,7 +78,15 @@ for (f in c(1:4)) {
         buff.i <- buff.i %>% rename("NOT.USED" = "first.mine.year",
                                     "first.mine.year" = "year.25p")
       }
-      forest.clusters.j <- forest.clusters %>% filter(country == country.j)
+
+      # check for any zero cover
+      zeroes <- "No"
+      if (any(buff.i$forest.cells.2000 ==0)) {
+        cat("Warning - 0 forest cover in 2000 detected for", "\n")
+        buff.i <- 
+          buff.i %>% filter(forest.cells.2000>0) 
+        zeroes <- "Yes"
+      }
       
       buff.i <- did.prep(buff.i,lead.time = -23, post.time = 23,
                          type = "loss", covariates = NULL) %>%
@@ -98,7 +106,9 @@ for (f in c(1:4)) {
                            cluster_var = "cluster.country.id", verbose = TRUE)
       
       gardner.tidy <- did2s.tidy(gardner.did, buff = name.i) %>%
-        mutate(cluster.n = length(unique(buff.i$cluster.country.id)),
+        mutate(cluster.n = length(unique((filter(buff.i, rel.year.first >= t) %>%
+                 filter(first.mine.year != 1) %>%
+                 filter(loss.year != 2020))$cluster.country.id)),
                pre.period = t, mine.yr.method = f)
       
       ## Gardner 2022 + covariates
@@ -115,7 +125,9 @@ for (f in c(1:4)) {
       
       
       gardner.tidy.covar <- did2s.tidy(gardner.did.covar, buff = name.i) %>%
-        mutate(cluster.n = length(unique(covs.buff.i$cluster.country.id)),
+        mutate(cluster.n = length(unique((filter(covs.buff.i, rel.year.first >= t) %>%
+                                            filter(first.mine.year != 1) %>%
+                                            filter(loss.year != 2020))$cluster.country.id)),
                pre.period = t, mine.yr.method = f)
       
       ## CSA runs optimally when provided with the whole panel.
@@ -130,7 +142,7 @@ for (f in c(1:4)) {
                           bstrap=T, cband=T)
         
         csa.tidy.df <- csa.tidy(csa.did, buff = name.i) %>%
-          mutate(cluster.n = length(unique(buff.i$cluster.country.id)),
+          mutate(cluster.n = csa.did$n,
                  pre.period = NA, mine.yr.method = f)
         
         
@@ -143,7 +155,7 @@ for (f in c(1:4)) {
                                 bstrap=T, cband=T)
         
         csa.tidy.covar <- csa.tidy(csa.did.covar, buff = name.i) %>%
-          mutate(cluster.n = length(unique(covs.buff.i$cluster.country.id)),
+          mutate(cluster.n = csa.did.covar$n,
                  pre.period = NA, mine.yr.method = f)
       }
       ## dont write out the CSA results twice for each of the Gardner t periods
