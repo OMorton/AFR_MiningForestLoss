@@ -9,6 +9,10 @@ library(sf)
 source("functions.R")
 
 ## Set up buffer forest data ---------------------------------------------------
+# forest mine clusters
+forest.clusters <- read.csv("Outputs/third.forest.clusters.csv")
+forest.clusters <- forest.clusters %>% mutate(forest.id = paste0(country, ".", forest.clusters))
+
 dir.path <- "X:/morton_research/User/bi1om/Research/Mining/AfricaWideMining_ForestLoss/Analysis/Data/NationalMining/forest.loss.in.buffers/"
 cov.path <- "X:/morton_research/User/bi1om/Research/Mining/AfricaWideMining_ForestLoss/Analysis/Data/NationalMining/model.covariates/"
 file.dir <- data.frame(file = list.files(path = dir.path))
@@ -83,6 +87,15 @@ for (t in c(-5, -10)) {
         # set first year as the 10p trigger
         rename("first.mine.year" = "year.10p")
       
+      # check for any zero cover
+      zeroes <- "No"
+      if (any(dat.i.c$forest.cells.2000 ==0)) {
+        cat("Warning - 0 forest cover in 2000 detected for", "\n")
+        dat.i.c <- 
+          dat.i.c %>% filter(forest.cells.2000>0) 
+        zeroes <- "Yes"
+      }
+      
       dat.i.c <- did.prep(dat.i.c, lead.time = -23, post.time = 23,
                           type = "loss", covariates = NULL) %>%
         left_join(comm.df, by = c("CLUSTER_ID", "country"),
@@ -90,7 +103,9 @@ for (t in c(-5, -10)) {
         filter(material == comm.c) %>%
         group_by(country, CLUSTER_ID) %>%
         mutate(cluster.country.id = cur_group_id(),
-               country = as.factor(country))
+               country = as.factor(country),
+               forest.id = paste0(country, ".", CLUSTER_ID)) %>%
+        filter(forest.id %in% forest.clusters$forest.id)
       
       gardner.did <- did2s(data = filter(dat.i.c, rel.year.first >= t),
                            yname = "cumulative.forest.loss.perc", 
@@ -100,7 +115,9 @@ for (t in c(-5, -10)) {
                            cluster_var = "cluster.country.id", verbose = TRUE)
       
       gardner.tidy.1km <- did2s.tidy(gardner.did, buff = buff.i) %>%
-        mutate(cluster.n = length(unique(dat.i.c$cluster.country.id)),
+        mutate(cluster.n = length(unique((filter(dat.i.c, rel.year.first >= t) %>%
+                                            filter(first.mine.year != 1) %>%
+                                            filter(loss.year != 2020))$cluster.country.id)),
                pre.period = t)
       
       if (t == -10) {
@@ -112,7 +129,7 @@ for (t in c(-5, -10)) {
                         bstrap=T, cband=T)
       
       csa.tidy.1km <- csa.tidy(csa.did, buff = buff.i) %>%
-        mutate(cluster.n = length(unique(dat.i.c$cluster.country.id)),
+        mutate(cluster.n = csa.did$n,
                pre.period = NA)
       }
       ## dont write out the CSA results twice for each of the Gardner t periods
@@ -131,9 +148,14 @@ for (t in c(-5, -10)) {
   }
 }
 
-save(comm.did.out, file = "Outputs/DiD.tables/SSA.ALL.commodities.tidy.Aug25.10p.RData")
+save(comm.did.out, file = "Outputs/DiD.tables/SSA.ALL.commodities.tidy.Sept25.10p.PlantationsRem.RData")
 
 # Primary commodities likely mined per site ------------------------------------
+
+# forest mine clusters
+forest.clusters <- read.csv("Outputs/third.forest.clusters.csv")
+forest.clusters <- forest.clusters %>% mutate(forest.id = paste0(country, ".", forest.clusters))
+
 comm.path <- "X:/morton_research/User/bi1om/Research/Mining/AfricaWideMining_ForestLoss/Analysis/Data/NationalMining/country.mining.commodity.type/"
 comm.dir <- data.frame(file = list.files(path = comm.path, pattern = "commodity.5km.buffer.RData"))
 comm.df <- data.frame()
@@ -181,7 +203,9 @@ for (t in c(-5, -10)) {
         filter(material == comm.c) %>%
         group_by(country, CLUSTER_ID) %>%
         mutate(cluster.country.id = cur_group_id(),
-               country = as.factor(country))
+               country = as.factor(country),
+               forest.id = paste0(country, ".", CLUSTER_ID)) %>%
+        filter(forest.id %in% forest.clusters$forest.id)
       
       gardner.did <- did2s(data = filter(dat.i.c, rel.year.first >= t),
                            yname = "cumulative.forest.loss.perc", 
@@ -222,4 +246,4 @@ for (t in c(-5, -10)) {
   }
 }
 
-save(comm.did.out, file = "Outputs/DiD.tables/SSA.PRIMARY.commodities.tidy.Aug25.10p.RData")
+save(comm.did.out, file = "Outputs/DiD.tables/SSA.PRIMARY.commodities.tidy.Sept25.10p.PlantationsRem.RData")
