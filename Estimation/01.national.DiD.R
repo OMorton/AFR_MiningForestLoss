@@ -179,7 +179,8 @@ forest.clusters <- forest.clusters %>% mutate(forest.id = paste0(country, ".", f
 ssa.1km <- ssa.1km %>% mutate(forest.id = paste0(country, ".", CLUSTER_ID)) %>%
   filter(forest.id %in% forest.clusters$forest.id)
 
-CSA.n <- ssa.1km %>% group_by(country) %>% filter(first.mine.year != 1 & first.mine.year != 20) %>%
+CSA.n <- ssa.1km %>% group_by(country) %>%
+  filter(first.mine.year != 1 & first.mine.year != 20) %>%
                      filter(forest.cells.2000 != 0) %>%
   summarise(cluster.n = n_distinct(CLUSTER_ID),
             method = "Callaway & Sant'Anna 2021")
