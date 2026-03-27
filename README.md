@@ -4,7 +4,7 @@ Code associated with ***Morton O.\*, Bousfield C G.\*,*** Dégny Valé P., Lamb 
 ### File summary
 
 **Africa.Mining.Data.Curation.R**
-R script to convert raw land cover data from Masolele _et al_ into mining clusters, calculate deforestation through time across different buffer sizes and generate model covariate data ready for input to DiD models__
+R script to convert raw land cover data from Masolele _et al_ into mining clusters, calculate deforestation through time across different buffer sizes and generate model covariate data ready for input to DiD models
 
 **Functions.R**
 Assorted helper functions to read in data, fit the heterogeneity robust DiD models, and convenience functions for plotting and summarising.
