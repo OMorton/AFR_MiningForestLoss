@@ -1,6 +1,5 @@
-## Mining induced deforestation across sub-Saharan Africa
 
-Code associated with Morton O.\*, Bousfield C G.\*, Dégny Valé P., Lamb I., Maus V., Bryant R G., & Edwards D P. (\*Joint first authors)  as **"Mining triggers extensive additional deforestation across sub-Saharan Africa"** at *Nature* (*Accepted in Principle*).
+Code associated with ***Morton O.\*, Bousfield C G.\*,*** Dégny Valé P., Lamb I., Maus V., Bryant R G., & Edwards D P. (***\*Joint first authors***)  as **"Mining triggers extensive additional deforestation across sub-Saharan Africa"** at *Nature* (*Accepted in Principle*).
 
 ### File summary
 
